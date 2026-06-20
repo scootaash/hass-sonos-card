@@ -8,7 +8,7 @@ function mkEl() {
     _children: [],
     style: new Proxy({}, { get: (t, k) => t[k] || "", set: (t, k, v) => ((t[k] = v), true) }),
     classList: { toggle() {}, add() {}, remove() {}, contains() { return false; } },
-    dataset: { room: "0", pl: "0" },
+    dataset: { room: "0", pl: "0", act: "0" },
     addEventListener(type, h) { HANDLERS.push({ type, h, el: this }); },
     removeEventListener() {},
     appendChild(c) { this._children.push(c); return c; },
@@ -27,7 +27,7 @@ function mkEl() {
   return el;
 }
 function mkList(sel) {
-  const n = { ".pill": 6, ".grow": 6, ".prow": 6, ".tile": 10, ".slider.master": 2 }[sel] ?? 1;
+  const n = { ".pill": 6, ".grow": 6, ".prow": 6, ".tile": 10, ".abtn": 2, ".slider.master": 2 }[sel] ?? 1;
   return Array.from({ length: n }, mkEl);
 }
 
@@ -54,6 +54,15 @@ eval(fs.readFileSync(file, "utf8"));
 const A = (extra) => Object.assign({ volume_level: 0.3, media_content_type: "music", group_members: [] }, extra);
 const hass = {
   callService(d, s, data) { /* record */ (hass._calls = hass._calls || []).push([d, s, data]); },
+  // Browse stub — exercises the auto-populate-playlists path.
+  callWS(msg) {
+    (hass._ws = hass._ws || []).push(msg);
+    return Promise.resolve({ children: [
+      { title: "Coastal Mornings", media_content_id: "library://playlist/42", media_content_type: "playlist", thumbnail: "/api/media_proxy/42.jpg", can_play: true },
+      { title: "Deep Focus", media_content_id: "library://playlist/43", media_content_type: "playlist", thumbnail: null, can_play: true },
+      { title: "Not playable", media_content_id: "x", can_play: false, can_expand: false },
+    ] });
+  },
   states: {
     "media_player.master_bedroom": { state: "playing", attributes: A({ media_title: "Coast lines", media_artist: "Marlow Bay", media_duration: 238, media_position: 94, media_position_updated_at: new Date().toISOString(), entity_picture: "/api/media_player_proxy/media_player.master_bedroom?token=x", volume_level: 0.5, friendly_name: "Master Bedroom", group_members: ["media_player.master_bedroom", "media_player.kitchen"] }) },
     "media_player.kitchen": { state: "playing", attributes: A({ volume_level: 0.36, friendly_name: "Kitchen", group_members: ["media_player.master_bedroom", "media_player.kitchen"] }) },
@@ -61,10 +70,10 @@ const hass = {
     "media_player.garage": { state: "playing", attributes: A({ volume_level: 0.25, friendly_name: "Garage", group_members: ["media_player.lounge", "media_player.garage"] }) },
     "media_player.spare_room": { state: "paused", attributes: A({ volume_level: 0.34, friendly_name: "Spare Room", group_members: ["media_player.spare_room"] }) },
     "media_player.hallway": { state: "idle", attributes: A({ volume_level: 0.3, friendly_name: "Hall", group_members: ["media_player.hallway"] }) },
+    "media_player.mass_master_bedroom": { state: "playing", attributes: A({ media_title: "The Salt Path", media_duration: 15120, media_position: 480, media_position_updated_at: new Date().toISOString(), media_content_type: "audiobook" }) },
   },
 };
 const cfg = {
-  audiobook: { resume_script: "script.resume_audiobook_on_master" },
   default_room: "media_player.kitchen",
   rooms: [
     { name: "Lounge", entity: "media_player.lounge", mass_entity: "media_player.mass_lounge", default_volume: 29 },
@@ -74,7 +83,16 @@ const cfg = {
     { name: "Spare Room", entity: "media_player.spare_room", mass_entity: "media_player.mass_spare_room", default_volume: 34 },
     { name: "Hall", entity: "media_player.hallway", mass_entity: "media_player.mass_hall", default_volume: 30 },
   ],
-  playlists: Array.from({ length: 10 }, (_, i) => ({ name: "PL" + i, media_id: "library://playlist/" + i, media_type: "playlist", image: i % 2 ? "http://x/" + i + ".jpg" : undefined })),
+  // Generic action buttons: a script (gets target_player injected) + a direct MA call with an MDI icon.
+  actions: {
+    title: "Audiobook",
+    items: [
+      { name: "Play current audiobook", service: "script.resume_audiobook_on_master", icon: "book", status_entity: "media_player.mass_master_bedroom", subtitle: "Resume where you left off" },
+      { name: "Evening radio", service: "music_assistant.play_media", icon: "mdi:radio", data: { entity_id: "media_player.mass_kitchen", media_id: "library://radio/1", media_type: "radio" } },
+    ],
+  },
+  // Auto-populated playlists: no explicit items, browse a Music Assistant source.
+  playlists: { title: "Apple Music playlists", source: "library://playlist", source_type: "playlist" },
 };
 
 const card = new CardClass();
@@ -93,7 +111,12 @@ for (const { type, h, el } of HANDLERS) {
 }
 card.hass = hass; // re-render after interactions
 
-card.disconnectedCallback();
-console.log("handlers fired:", fired, "errors:", errs, "serviceCalls:", (hass._calls || []).length);
-console.log(errs ? "SMOKE FAIL: " + file : "SMOKE OK: " + file);
-process.exit(errs ? 1 : 0);
+// Let the async playlist browse resolve, then re-render and report.
+(async () => {
+  await new Promise((r) => setTimeout(r, 20));
+  try { card.hass = hass; } catch (err) { errs++; console.log("POST-BROWSE ERR:", err.message); }
+  card.disconnectedCallback();
+  console.log("handlers fired:", fired, "errors:", errs, "serviceCalls:", (hass._calls || []).length, "browsedPlaylists:", (card._playlists || []).length);
+  console.log(errs ? "SMOKE FAIL: " + file : "SMOKE OK: " + file);
+  process.exit(errs ? 1 : 0);
+})();

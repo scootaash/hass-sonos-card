@@ -47,12 +47,18 @@ Grouping model (live, native — no helpers):
 - **"Make \<room\> its own group"** button (top of the group column) `unjoin`s the focused speaker —
   the only way to split out the coordinator.
 
-Playback is helper-free:
-- Playlists → `music_assistant.play_media` directly on the focused group's coordinator `mass_<room>`.
-- Audiobook → the card still calls the configured `resume_script`, **passing** `target_player`
-  (coordinator's `mass_<room>`) and `target_room` (its name) as service data. The script must read
-  `target_player` instead of an `input_select` (one-line change), e.g.
-  `service: music_assistant.play_media … target: { entity_id: "{{ target_player }}" }`.
+Playback is helper-free and generic (nothing here is hard-wired to Apple Music / Audible):
+- **Playlists** (`playlists:`) → tiles play via `music_assistant.play_media` on the focused group's
+  coordinator `mass_<room>`. Either list explicit `items`, or give a `source` (an MA browse id, e.g.
+  a provider's playlists node) and the card **auto-populates** the tiles by browsing it (`hass.callWS`
+  `media_player/browse_media`). The section heading is configurable.
+- **Action buttons** (`actions:`) → a generic list of buttons, each calling a configured `service`.
+  For `script.*` services the card injects `target_player` (coordinator's `mass_<room>`) and
+  `target_room`; other services receive exactly their configured `data`. Icons are built-in glyph
+  names or `mdi:*` (rendered via HA's `<ha-icon>`). An optional `status_entity` drives a live
+  subtitle (now-playing title + minutes left). The legacy `audiobook:` block still works (it maps to
+  one action). The Audible resume script must read `target_player` instead of an `input_select`
+  (one-line change), e.g. `target: { entity_id: "{{ target_player }}" }`.
 
 Rooms (name → Sonos entity → MA entity → default volume %):
 - Lounge `media_player.lounge` `media_player.mass_lounge` 29
@@ -66,16 +72,34 @@ Rooms (name → Sonos entity → MA entity → default volume %):
 ```yaml
 type: custom:fraser-music-card
 default_room: media_player.lounge          # optional: which group is focused on first load (localStorage wins after)
-audiobook:
-  resume_script: script.resume_audiobook_on_master   # called with target_player + target_room data
 rooms:
   - { name: Lounge, entity: media_player.lounge, mass_entity: media_player.mass_lounge, default_volume: 29 }
-  # …one per room (mass_entity is required for playlist/audiobook playback)
+  # …one per room (mass_entity is required for playlist/action playback)
+
+# Generic action buttons (right panel). `audiobook:` is still accepted as a one-item shorthand.
+actions:
+  title: Audiobook                         # optional section heading (default "Shortcuts")
+  items:
+    - name: Play current audiobook
+      service: script.resume_audiobook_on_master   # script.* gets target_player + target_room injected
+      icon: book                                    # built-in glyph name, or mdi:* via <ha-icon>
+      status_entity: media_player.mass_lounge       # optional: live subtitle (now-playing + "Xm left")
+      subtitle: Resume where you left off           # static fallback subtitle
+    # - { name: Evening radio, service: music_assistant.play_media, icon: mdi:radio,
+    #     data: { entity_id: media_player.mass_lounge, media_id: library://radio/1, media_type: radio } }
+
+# Playlist tiles — either auto-populate from a Music Assistant source, or list items explicitly.
 playlists:
-  - { name: Chill, media_id: library://playlist/13, media_type: playlist }
-  - { name: Favourite Songs, media_id: library://playlist/17, media_type: playlist, image: <art-url> }
-  # …
+  title: Apple Music playlists             # optional heading
+  source: library://playlist               # browse this MA node → one tile per playlist found
+  source_type: playlist                    # optional content_type for the browse call
+  # browse_entity: media_player.mass_lounge  # optional; defaults to the first room with a mass_entity
+  # items:                                  # optional: explicit tiles (override auto-browse)
+  #   - { name: Chill, media_id: library://playlist/13, media_type: playlist, image: <art-url> }
 ```
+Builtin action glyphs: `book play star headphones radio clock heart moon bolt music vol bars`
+(anything else → `mdi:*`). Find a `source`/`media_id` by opening HA's media browser on the MA
+player — the path it shows is the browse id.
 
 ## Deploy
 This is a file-hosted card (we deliberately moved off the 24 KB inline-resource route):

@@ -2,9 +2,10 @@
 
 An immersive multi-room music player **custom Lovelace card** for Home Assistant, built for a
 Sonos + Music Assistant household and a wall-mounted tablet (1280×800), responsive down to
-phones. Album-art colour wash, master/speaker selector, live speaker grouping, custom volume
-sliders with a per-room popover, Apple Music (via Music Assistant) playlist tiles, and an
-audiobook resume button.
+phones. Album-art colour wash, group selector, live speaker grouping, custom volume sliders
+with a per-room popover, playlist tiles (auto-populated from any Music Assistant source, or
+listed explicitly), and a configurable set of action buttons (scripts/services — e.g. an
+audiobook resume button).
 
 It is a **frontend card only** — no integration / Python component. It reads `hass` state and
 calls existing services (`media_player.*`, `music_assistant.play_media`).

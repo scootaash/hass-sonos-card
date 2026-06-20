@@ -13,6 +13,15 @@ const ICON = {
   chev: '<polyline points="6 9 12 15 18 9"></polyline>',
   bars: '<line x1="4" y1="21" x2="4" y2="11"></line><line x1="12" y1="21" x2="12" y2="4"></line><line x1="20" y1="21" x2="20" y2="14"></line>',
   book: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>',
+  play: '<polygon points="5 3 19 12 5 21 5 3"></polygon>',
+  star: '<polygon points="12 2 15.1 8.3 22 9.3 17 14.1 18.2 21 12 17.8 5.8 21 7 14.1 2 9.3 8.9 8.3 12 2"></polygon>',
+  headphones: '<path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>',
+  radio: '<circle cx="12" cy="12" r="2"></circle><path d="M4.93 19.07a10 10 0 0 1 0-14.14M7.76 16.24a6 6 0 0 1 0-8.49M16.24 7.76a6 6 0 0 1 0 8.49M19.07 4.93a10 10 0 0 1 0 14.14"></path>',
+  clock: '<circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>',
+  heart: '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>',
+  moon: '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>',
+  bolt: '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>',
+  music: '<path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle>',
 };
 const GRADS = ["#1bb6c7,#0c5f72", "#5a3fa6,#2f2170", "#e8913a,#a8451f", "#c0395f,#7a1f3a"];
 const svg = (p, w = 24, sw = 2, fill = "none") =>
@@ -27,16 +36,32 @@ class TvhgcMusicCard extends HTMLElement {
     if (!config || !Array.isArray(config.rooms) || !config.rooms.length)
       throw new Error("fraser-music-card: `rooms` is required");
     this._cfg = config;
-    const ab = config.audiobook || {};
-    this._abResume = ab.resume_script || "script.resume_audiobook_on_master";
-    this._abSource = ab.source_entity || null;
     this._rooms = config.rooms.map((r) => ({
       name: r.name || r.entity,
       entity: r.entity,
       massEntity: r.mass_entity || null,
       def: r.default_volume != null ? r.default_volume : 40,
     }));
-    this._playlists = config.playlists || [];
+    // Action buttons — generic list; legacy `audiobook:` maps to a single action.
+    const ab = config.audiobook;
+    const actionsCfg = config.actions || (ab ? {
+      title: "Audiobook",
+      items: [{ name: "Play current audiobook", service: ab.resume_script || "script.resume_audiobook_on_master", icon: "book", status_entity: ab.source_entity || null, subtitle: "Resume where you left off" }],
+    } : null);
+    this._actionsTitle = (actionsCfg && actionsCfg.title) || "Shortcuts";
+    this._actions = ((actionsCfg && actionsCfg.items) || []).map((a) => ({
+      name: a.name || "Run", service: a.service || "", data: a.data || a.service_data || {},
+      icon: a.icon || "play", statusEntity: a.status_entity || null, subtitle: a.subtitle || "",
+    }));
+    // Playlists — single section; either explicit `items` or auto-browse a `source`.
+    const plCfg = Array.isArray(config.playlists) ? { items: config.playlists } : (config.playlists || {});
+    this._playlistsTitle = plCfg.title || "Playlists";
+    this._playlistSource = plCfg.source || null;
+    this._playlistSourceType = plCfg.source_type || "playlist";
+    this._playlistBrowseEntity = plCfg.browse_entity || null;
+    this._playlistItems = (plCfg.items || []).map((p) => ({ name: p.name, media_id: p.media_id, media_type: p.media_type || "playlist", image: p.image || null }));
+    this._playlists = this._playlistItems.slice();
+    this._browsed = false;
     this._focusKey = "fmc-focus:" + this._rooms[0].entity;
     this._cfgDefaultFocus = config.default_room || null;
     this._focusEntity = null;
@@ -55,6 +80,7 @@ class TvhgcMusicCard extends HTMLElement {
     this._hass = hass;
     if (!this._built) this._build();
     this._update();
+    this._browsePlaylists();
   }
   getCardSize() { return 14; }
   connectedCallback() {
@@ -130,10 +156,8 @@ class TvhgcMusicCard extends HTMLElement {
       `<button class="pill" data-room="${i}"><span class="dot"></span><span class="pn">${esc(r.name)}</span></button>`).join("");
     const grows = this._rooms.map((r, i) =>
       `<div class="grow" data-room="${i}"><div class="gtext"><span class="gn">${esc(r.name)}</span><span class="gs"></span></div><button class="gtog" data-room="${i}"></button></div>`).join("");
-    const tiles = this._playlists.map((p, i) => {
-      const bg = p.image ? `background-image:url('${esc(p.image)}');background-size:cover;background-position:center;` : `background:linear-gradient(150deg,${GRADS[i % 4]});`;
-      return `<button class="tile" data-pl="${i}" style="${bg}"><span class="tscrim"></span><span class="tn">${esc(p.name)}</span></button>`;
-    }).join("");
+    const actionBtns = this._actions.map((a, i) =>
+      `<button class="abtn" data-act="${i}"><span class="abic">${this._icon(a.icon, 22)}</span><span style="min-width:0"><span class="abt1">${esc(a.name)}</span><span class="abt2"></span></span></button>`).join("");
     const popRooms = this._rooms.map((r, i) =>
       `<div class="prow" data-room="${i}"><div class="prhead"><span class="prn">${esc(r.name)}</span><div class="prr"><button class="prdef" data-room="${i}">${svg(ICON.reset, 12, 2.2)}Default</button><span class="prpct"></span></div></div><div class="slider sm" data-room="${i}"><div class="strack"><div class="sfill"></div><div class="sknob"></div></div></div></div>`).join("");
 
@@ -216,8 +240,10 @@ class TvhgcMusicCard extends HTMLElement {
 .rowlabel{display:flex;align-items:center;justify-content:space-between;}
 .popset{margin-top:18px;width:100%;padding:11px;border-radius:10px;border:none;background:#0066FF;color:#fff;font:600 14px/1 'DM Sans';cursor:pointer;}
 .panel{flex:none;width:386px;display:flex;flex-direction:column;gap:16px;padding:24px;border-radius:20px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);}
-.abbtn{display:flex;align-items:center;gap:14px;padding:16px;border-radius:16px;border:1px solid rgba(0,102,255,.5);background:linear-gradient(135deg,rgba(0,102,255,.28),rgba(0,204,204,.2));color:#fff;cursor:pointer;text-align:left;}
+.actions{display:flex;flex-direction:column;gap:10px;}
+.abtn{display:flex;align-items:center;gap:14px;padding:16px;border-radius:16px;border:1px solid rgba(0,102,255,.5);background:linear-gradient(135deg,rgba(0,102,255,.28),rgba(0,204,204,.2));color:#fff;cursor:pointer;text-align:left;width:100%;}
 .abic{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.16);flex:none;}
+.abic ha-icon{--mdc-icon-size:22px;}
 .abt1{display:block;font:700 16px/1.2 'DM Sans';}
 .abt2{display:block;font:400 13px/1.3 'DM Sans';color:rgba(255,255,255,.7);margin-top:3px;}
 .grid{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:12px;overflow:auto;}
@@ -270,10 +296,8 @@ class TvhgcMusicCard extends HTMLElement {
       </div>
     </div>
     <div class="panel">
-      <span class="ovl">Audiobook</span>
-      <button class="abbtn"><span class="abic">${svg(ICON.book, 22)}</span><span style="min-width:0"><span class="abt1">Play current audiobook</span><span class="abt2">Resume where you left off</span></span></button>
-      <span class="ovl" style="margin-top:4px">Apple Music playlists</span>
-      <div class="grid">${tiles}</div>
+      ${this._actions.length ? `<span class="ovl">${esc(this._actionsTitle)}</span><div class="actions">${actionBtns}</div>` : ""}
+      ${(this._playlistItems.length || this._playlistSource) ? `<span class="ovl"${this._actions.length ? ' style="margin-top:4px"' : ""}>${esc(this._playlistsTitle)}</span><div class="grid"></div>` : ""}
     </div>
   </div>
 </div>`;
@@ -290,8 +314,8 @@ class TvhgcMusicCard extends HTMLElement {
       mFill: $(".slider.master .sfill"), mKnob: $(".slider.master .sknob"),
       drop: $(".drop"), dlabel: $(".dlabel"), pop: $(".pop"), popcnt: $(".popcnt"),
       allpct: $(".allpct"), mvol: $(".mvol"),
-      abbtn: $(".abbtn"), abt1: $(".abt1"), abt2: $(".abt2"),
-      tiles: [...root.querySelectorAll(".tile")], prows: [...root.querySelectorAll(".prow")],
+      grid: $(".grid"), actions: [...root.querySelectorAll(".abtn")],
+      prows: [...root.querySelectorAll(".prow")],
       masterSliders: [...root.querySelectorAll(".slider.master")],
     };
 
@@ -311,8 +335,8 @@ class TvhgcMusicCard extends HTMLElement {
     this.$.drop.addEventListener("click", (e) => { e.stopPropagation(); this._open = !this._open; this.$.mvol.classList.toggle("act", false); this._update(); });
     this.$.mvol.addEventListener("click", () => this._syncMaster());
     $(".popset").addEventListener("click", () => this._syncMaster());
-    this.$.tiles.forEach((el) => el.addEventListener("click", () => this._playPlaylist(+el.dataset.pl)));
-    this.$.abbtn.addEventListener("click", () => { const c = this._coordRoom(); this._svc("script", this._abResume.replace(/^script\./, ""), { target_player: c.massEntity, target_room: c.name }); });
+    this.$.actions.forEach((el) => el.addEventListener("click", () => this._runAction(+el.dataset.act)));
+    this._renderTiles();
     this._onDoc = (e) => { if (this._open && !e.composedPath().includes(this.$.pop) && e.composedPath().indexOf(this.$.drop) < 0) { this._open = false; this._update(); } };
     document.addEventListener("click", this._onDoc);
     this._resize();
@@ -354,7 +378,48 @@ class TvhgcMusicCard extends HTMLElement {
   }
   _prev() { this._svc("media_player", "media_previous_track", { entity_id: this._coordRoom().entity }); }
   _next() { this._svc("media_player", "media_next_track", { entity_id: this._coordRoom().entity }); }
-  _isBook(s) { return s && ["audiobook", "podcast"].includes(s.attributes.media_content_type); }
+  // Built-in glyph by name, or pass `mdi:*` through to HA's <ha-icon>.
+  _icon(name, size = 22) {
+    if (typeof name === "string" && name.startsWith("mdi:"))
+      return `<ha-icon icon="${esc(name)}" style="--mdc-icon-size:${size}px;width:${size}px;height:${size}px"></ha-icon>`;
+    return svg(ICON[name] || ICON.play, size);
+  }
+  _runAction(i) {
+    const a = this._actions[i]; if (!a || !a.service) return;
+    const dot = a.service.indexOf("."); if (dot < 0) return;
+    const dom = a.service.slice(0, dot), srv = a.service.slice(dot + 1);
+    const c = this._coordRoom(); const data = Object.assign({}, a.data);
+    if (dom === "script") { data.target_player = c.massEntity; data.target_room = c.name; }
+    this._svc(dom, srv, data);
+  }
+  _tilesHtml() {
+    return this._playlists.map((p, i) => {
+      const bg = p.image ? `background-image:url('${esc(p.image)}');background-size:cover;background-position:center;` : `background:linear-gradient(150deg,${GRADS[i % 4]});`;
+      return `<button class="tile" data-pl="${i}" style="${bg}"><span class="tscrim"></span><span class="tn">${esc(p.name)}</span></button>`;
+    }).join("");
+  }
+  _renderTiles() {
+    if (!this.$ || !this.$.grid) return;
+    this.$.grid.innerHTML = this._tilesHtml();
+    this.$.tiles = [...this.$.grid.querySelectorAll(".tile")];
+    this.$.tiles.forEach((el) => el.addEventListener("click", () => this._playPlaylist(+el.dataset.pl)));
+  }
+  _browseTarget() {
+    return this._playlistBrowseEntity || (this._rooms.find((r) => r.massEntity) || {}).massEntity || null;
+  }
+  // Auto-populate tiles by browsing a Music Assistant source (when no explicit items).
+  async _browsePlaylists() {
+    if (this._browsed || this._playlistItems.length || !this._playlistSource) return;
+    const ent = this._browseTarget();
+    if (!ent || !this._hass || typeof this._hass.callWS !== "function") return;
+    this._browsed = true;
+    try {
+      const res = await this._hass.callWS({ type: "media_player/browse_media", entity_id: ent, media_content_id: this._playlistSource, media_content_type: this._playlistSourceType });
+      const items = ((res && res.children) || []).filter((c) => c.can_play || c.can_expand)
+        .map((c) => ({ name: c.title, media_id: c.media_content_id, media_type: c.media_content_type || "playlist", image: c.thumbnail || null }));
+      if (items.length) { this._playlists = items; this._renderTiles(); }
+    } catch (e) { /* leave tiles empty; user can supply explicit items */ }
+  }
   _playPlaylist(i) {
     const p = this._playlists[i]; if (!p) return;
     const mass = this._coordRoom().massEntity; if (!mass) return;
@@ -464,7 +529,6 @@ class TvhgcMusicCard extends HTMLElement {
     this.$.splitbtn.style.display = canSplit ? "" : "none";
     if (canSplit) this.$.splitbtn.innerHTML = svg(ICON.split, 14, 2.2) + "<span>Make " + esc(this._focusRoom().name) + " its own group</span>";
     // now playing
-    const book = this._isBook(s);
     this.$.t1.textContent = a.media_title || (s ? (s.state === "idle" ? "Nothing playing" : m.name) : "No data");
     this.$.t2.textContent = a.media_artist || a.media_album_name || "";
     this.$.eq.classList.toggle("on", !!playing);
@@ -496,14 +560,20 @@ class TvhgcMusicCard extends HTMLElement {
         row.querySelector(".sfill").style.width = v + "%"; row.querySelector(".sknob").style.left = v + "%";
       });
     }
-    // audiobook label
-    const ab = this._abSource ? this._st(this._abSource) : (book ? s : null);
-    if (ab && ab.attributes.media_title) {
-      const dur = ab.attributes.media_duration, pos = this._livePos(ab);
-      const left = dur ? ` · ${Math.max(0, Math.round((dur - pos) / 60))}m left` : "";
-      this.$.abt1.textContent = "Play current audiobook";
-      this.$.abt2.textContent = ab.attributes.media_title + left;
-    }
+    // action subtitles — live now-playing from status_entity, else the static subtitle
+    this._actions.forEach((act, i) => {
+      const el = this.$.actions[i]; if (!el) return;
+      let text = act.subtitle || "";
+      if (act.statusEntity) {
+        const st = this._st(act.statusEntity);
+        if (st && st.attributes && st.attributes.media_title) {
+          const dur = st.attributes.media_duration, pos = this._livePos(st);
+          const left = dur ? ` · ${Math.max(0, Math.round((dur - pos) / 60))}m left` : "";
+          text = st.attributes.media_title + left;
+        }
+      }
+      const sub = el.querySelector(".abt2"); if (sub) sub.textContent = text;
+    });
   }
 
   _applyWash(pic) {
