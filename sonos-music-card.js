@@ -1,7 +1,7 @@
 /* Sonos Music Card — multi-room music player (Immersive) for Home Assistant.
    Live native Sonos grouping (group_members + join/unjoin), helper-free. */
 const TEAL = "linear-gradient(155deg,#0c4a5a 0%,#0a3140 52%,#06222e 100%)";
-const VERSION = "0.6.0";
+const VERSION = "0.6.1";
 const ICON = {
   prev: '<polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line>',
   next: '<polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line>',
@@ -260,10 +260,10 @@ class SonosMusicCard extends HTMLElement {
 .gtext{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;}
 .gn{font:600 15px/1.2 'DM Sans';color:rgba(255,255,255,.92);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .gs{font:500 11px/1 'DM Sans';letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;color:rgba(255,255,255,.45);}
-.grow.grp{background:rgba(0,102,255,.14);border-color:rgba(0,102,255,.5);} .grow.grp .gs{color:#9cc0ff;}
+.grow.grp{background:rgba(0,204,204,.1);border-color:rgba(0,204,204,.4);} .grow.grp .gs{color:#7fe9ef;}
 .grow.master{background:rgba(0,204,204,.16);border-color:rgba(0,204,204,.55);box-shadow:inset 0 0 0 2px #18b2c4;} .grow.master .gs{color:#7fe9ef;}
 .gtog{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:none;border-radius:99px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);cursor:pointer;flex:none;}
-.grow.grp .gtog{background:#0066FF;color:#fff;}
+.grow.grp .gtog{background:#00CCCC;color:#06303d;}
 .grow.master .gtog{background:#18b2c4;color:#06303d;}
 .gtog.move{background:rgba(232,145,58,.2);color:#f3c18a;box-shadow:inset 0 0 0 1px rgba(232,145,58,.5);}
 .volrow{position:relative;display:flex;flex-direction:column;gap:12px;padding:16px 20px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);}
@@ -279,7 +279,7 @@ class SonosMusicCard extends HTMLElement {
 .btn{display:inline-flex;align-items:center;gap:8px;border-radius:99px;font:600 14px/1 'DM Sans';cursor:pointer;white-space:nowrap;padding:10px 16px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.18);}
 .btn.act{background:#18b2c4;color:#06303d;border-color:transparent;}
 .btn.icon{padding:9px 11px;}
-.pop{position:absolute;bottom:calc(100% + 12px);right:0;width:340px;max-width:calc(100vw - 32px);padding:18px;border-radius:16px;background:#0a2f3c;border:1px solid rgba(255,255,255,.14);z-index:30;}
+.pop{position:absolute;top:calc(100% + 12px);right:0;width:340px;max-width:calc(100vw - 32px);max-height:70vh;overflow:auto;padding:18px;border-radius:16px;background:#0a2f3c;border:1px solid rgba(255,255,255,.14);z-index:30;box-shadow:0 18px 40px rgba(0,0,0,.5);}
 .pophead,.prhead{display:flex;align-items:center;justify-content:space-between;}
 .popcnt{font:600 12px/1 'DM Sans';color:#7fe9ef;}
 .poprows{display:flex;flex-direction:column;gap:16px;margin-top:16px;}
@@ -311,24 +311,6 @@ class SonosMusicCard extends HTMLElement {
   <div class="wrap">
     <div class="left">
       <div class="col"><span class="ovl">Speakers — tap to select group</span><div class="pillrow">${pills}</div></div>
-      <div class="player">
-        <div class="art">
-          <img class="cover" alt="" style="display:none">
-          <div class="scrim">
-            <div class="np"><div class="eq"><span></span><span></span><span></span><span></span></div>
-              <div class="npt"><div class="t1">—</div><div class="t2"></div></div></div>
-            <div class="prog"><span class="te el">0:00</span>
-              <div class="bar"><div class="f"></div><div class="k"></div></div>
-              <span class="te du">0:00</span></div>
-            <div class="tr">
-              <button class="prev"></button>
-              <button class="pp"></button>
-              <button class="next"></button>
-            </div>
-          </div>
-        </div>
-        <div class="gcol"><div class="gchead"><span class="ovl">Tap to add to group</span><div class="ghbtns"><button class="addall" style="display:none"></button><button class="splitbtn" style="display:none"></button></div></div><div class="glist">${grows}</div></div>
-      </div>
       <div class="volrow">
         <div class="volmain">
           <span class="vic">${svg(ICON.vol, 20)}</span>
@@ -347,6 +329,24 @@ class SonosMusicCard extends HTMLElement {
           </div>
           </div>
         </div>
+      </div>
+      <div class="player">
+        <div class="art">
+          <img class="cover" alt="" style="display:none">
+          <div class="scrim">
+            <div class="np"><div class="eq"><span></span><span></span><span></span><span></span></div>
+              <div class="npt"><div class="t1">—</div><div class="t2"></div></div></div>
+            <div class="prog"><span class="te el">0:00</span>
+              <div class="bar"><div class="f"></div><div class="k"></div></div>
+              <span class="te du">0:00</span></div>
+            <div class="tr">
+              <button class="prev"></button>
+              <button class="pp"></button>
+              <button class="next"></button>
+            </div>
+          </div>
+        </div>
+        <div class="gcol"><div class="gchead"><span class="ovl">Tap to add to group</span><div class="ghbtns"><button class="addall" style="display:none"></button><button class="splitbtn" style="display:none"></button></div></div><div class="glist">${grows}</div></div>
       </div>
     </div>
     <div class="panel">
