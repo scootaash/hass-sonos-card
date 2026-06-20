@@ -71,12 +71,16 @@ Rooms (name → Sonos entity → MA entity → default volume %):
 - Hall `media_player.hallway` `media_player.mass_hall` 30  ← note: entity is `hallway`
 
 ## Config (YAML) the card accepts
+There's also a **visual GUI editor** (`getConfigElement` → `sonos-music-card-editor`): edit the
+card in a dashboard to get a form for the rooms (entity pickers, default volume, `mdi:*` icon) and
+`default_room`. It writes the same YAML and preserves `actions:`/`playlists:`. When a room has an
+`icon`, its top-nav pill becomes icon-only and the icon shows in the group rows.
 ```yaml
 type: custom:sonos-music-card
 default_room: media_player.lounge          # optional: which group is focused on first load (localStorage wins after)
 rooms:
-  - { name: Lounge, entity: media_player.lounge, mass_entity: media_player.mass_lounge, default_volume: 29 }
-  # …one per room (mass_entity is required for playlist/action playback)
+  - { name: Lounge, entity: media_player.lounge, mass_entity: media_player.mass_lounge, icon: mdi:sofa, default_volume: 29 }
+  # …one per room (mass_entity is required for playlist/action playback; icon is optional, mdi:*)
 
 # Generic action buttons (right panel). `audiobook:` is still accepted as a one-item shorthand.
 actions:
