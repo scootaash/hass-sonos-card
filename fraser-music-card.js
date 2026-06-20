@@ -1,0 +1,474 @@
+/* TVHGC multi-room music player card (Immersive) for Home Assistant.
+   Integrates with the existing Sonos master/group helpers + play scripts. */
+const TEAL = "linear-gradient(155deg,#0c4a5a 0%,#0a3140 52%,#06222e 100%)";
+const ICON = {
+  prev: '<polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line>',
+  next: '<polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line>',
+  check: '<polyline points="20 6 9 17 4 12"></polyline>',
+  plus: '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>',
+  reset: '<path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.4 2.6L3 8"></path><path d="M3 3v5h5"></path>',
+  vol: '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>',
+  chev: '<polyline points="6 9 12 15 18 9"></polyline>',
+  bars: '<line x1="4" y1="21" x2="4" y2="11"></line><line x1="12" y1="21" x2="12" y2="4"></line><line x1="20" y1="21" x2="20" y2="14"></line>',
+  book: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>',
+};
+const GRADS = ["#1bb6c7,#0c5f72", "#5a3fa6,#2f2170", "#e8913a,#a8451f", "#c0395f,#7a1f3a"];
+const svg = (p, w = 24, sw = 2, fill = "none") =>
+  `<svg width="${w}" height="${w}" viewBox="0 0 24 24" fill="${fill}" stroke="${fill === "none" ? "currentColor" : "none"}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+const playIco = '<svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg>';
+const pauseIco = '<svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1.2"></rect><rect x="14" y="5" width="4" height="14" rx="1.2"></rect></svg>';
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmt = (s) => { s = Math.max(0, Math.round(s || 0)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
+
+class TvhgcMusicCard extends HTMLElement {
+  setConfig(config) {
+    if (!config || !Array.isArray(config.rooms) || !config.rooms.length)
+      throw new Error("fraser-music-card: `rooms` is required");
+    this._cfg = config;
+    this._masterEntity = config.master_entity;
+    this._playScript = config.play_script || "script.music_play_on_master";
+    const ab = config.audiobook || {};
+    this._abResume = ab.resume_script || "script.resume_audiobook_on_master";
+    this._abSource = ab.source_entity || null;
+    this._rooms = config.rooms.map((r) => ({
+      name: r.name || r.entity,
+      entity: r.entity,
+      groupBool: r.group_boolean || null,
+      masterOption: r.master_option || r.name,
+      def: r.default_volume != null ? r.default_volume : 40,
+    }));
+    this._playlists = config.playlists || [];
+    this._drag = null;
+    this._localVol = {};
+    this._localVolAt = {};
+    this._open = false;
+    this._lastPic = undefined;
+    this._pillColor = null;
+    this._built = false;
+    if (this.shadowRoot) this._built = false;
+  }
+
+  set hass(hass) {
+    this._hass = hass;
+    if (!this._built) this._build();
+    this._update();
+  }
+  getCardSize() { return 14; }
+  connectedCallback() {
+    if (this._hass && !this._built) this._build();
+    this._timer = setInterval(() => this._update(), 500);
+    this._ro = new ResizeObserver(() => this._resize());
+    if (this._root) this._ro.observe(this._root);
+  }
+  disconnectedCallback() {
+    clearInterval(this._timer);
+    if (this._ro) this._ro.disconnect();
+  }
+
+  _st(id) { return this._hass && this._hass.states[id]; }
+  _masterName() {
+    const s = this._masterEntity && this._st(this._masterEntity);
+    return s ? s.state : (this._cfg.master_name || this._rooms[0].masterOption);
+  }
+  _masterRoom() {
+    const n = this._masterName();
+    return this._rooms.find((r) => r.masterOption === n) || this._rooms[0];
+  }
+  _grouped() {
+    const m = this._masterRoom();
+    return this._rooms.filter((r) => r === m || (r.groupBool && this._st(r.groupBool) && this._st(r.groupBool).state === "on"));
+  }
+  _vol(r) {
+    if (this._localVol[r.entity] != null) return this._localVol[r.entity];
+    const s = this._st(r.entity);
+    return s && s.attributes.volume_level != null ? Math.round(s.attributes.volume_level * 100) : 0;
+  }
+
+  _build() {
+    this._built = true;
+    const root = this.attachShadow ? (this.shadowRoot || this.attachShadow({ mode: "open" })) : this;
+    const pills = this._rooms.map((r, i) =>
+      `<button class="pill" data-room="${i}"><span class="dot"></span><span class="pn">${esc(r.name)}</span></button>`).join("");
+    const grows = this._rooms.map((r, i) =>
+      `<div class="grow" data-room="${i}"><div class="gtext"><span class="gn">${esc(r.name)}</span><span class="gs"></span></div><button class="gtog" data-room="${i}"></button></div>`).join("");
+    const tiles = this._playlists.map((p, i) => {
+      const bg = p.image ? `background-image:url('${esc(p.image)}');background-size:cover;background-position:center;` : `background:linear-gradient(150deg,${GRADS[i % 4]});`;
+      return `<button class="tile" data-pl="${i}" style="${bg}"><span class="tscrim"></span><span class="tn">${esc(p.name)}</span></button>`;
+    }).join("");
+    const popRooms = this._rooms.map((r, i) =>
+      `<div class="prow" data-room="${i}"><div class="prhead"><span class="prn">${esc(r.name)}</span><div class="prr"><button class="prdef" data-room="${i}">${svg(ICON.reset, 12, 2.2)}Default</button><span class="prpct"></span></div></div><div class="slider sm" data-room="${i}"><div class="strack"><div class="sfill"></div><div class="sknob"></div></div></div></div>`).join("");
+
+    root.innerHTML = `<style>
+:host{display:block;}
+*{box-sizing:border-box;}
+@keyframes eq{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}
+.root{position:relative;width:100%;max-width:1280px;margin:0 auto;border-radius:20px;overflow:hidden;background:${TEAL};font-family:'DM Sans',system-ui,sans-serif;color:#fff;}
+.wash{position:absolute;inset:0;background:${TEAL};transition:opacity .3s;z-index:0;}
+.blob{position:absolute;border-radius:99px;filter:blur(20px);z-index:0;}
+.b1{top:-160px;left:-120px;width:620px;height:620px;background:radial-gradient(circle,rgba(24,178,196,.45),transparent 65%);}
+.b2{bottom:-200px;right:120px;width:560px;height:560px;background:radial-gradient(circle,rgba(13,90,110,.6),transparent 65%);}
+.wrap{position:relative;z-index:1;display:flex;gap:36px;padding:40px;}
+.left{flex:1;display:flex;flex-direction:column;gap:22px;min-width:0;}
+.ovl{font:700 11px/1.2 'DM Sans';letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.55);}
+.col{display:flex;flex-direction:column;gap:10px;}
+.pillrow{display:flex;gap:10px;flex-wrap:wrap;}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:99px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.07);color:rgba(255,255,255,.78);font:500 14px/1 'DM Sans';cursor:pointer;}
+.pill .dot{width:7px;height:7px;border-radius:99px;background:rgba(255,255,255,.3);}
+.pill.grp{background:rgba(0,204,204,.12);border-color:rgba(0,204,204,.45);color:rgba(255,255,255,.92);}
+.pill.grp .dot{background:#00CCCC;}
+.pill.master{color:#fff;box-shadow:inset 0 0 0 2px #18b2c4;}
+.pill.master .dot{background:#eafdff;box-shadow:0 0 0 3px rgba(24,178,196,.55);}
+.player{flex:1;display:flex;gap:22px;min-height:0;}
+.art{position:relative;flex:none;width:498px;height:498px;border-radius:20px;overflow:hidden;background:linear-gradient(150deg,#1bb6c7,#0c5f72 48%,#07303f);}
+.cover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.scrim{position:absolute;left:0;right:0;bottom:0;padding:22px 26px 24px;background:linear-gradient(to top,rgba(4,22,30,.92),transparent);}
+.np{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+.eq{display:flex;align-items:flex-end;gap:3px;height:16px;}
+.eq span{width:3px;height:100%;background:#00e0e0;border-radius:2px;transform-origin:bottom;}
+.eq.on span{animation:eq .9s ease-in-out infinite;}
+.eq.on span:nth-child(2){animation-delay:-.45s}
+.npt{min-width:0;}
+.t1{font:700 20px/1.2 'DM Sans';color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.t2{font:400 14px/1.3 'DM Sans';color:rgba(255,255,255,.7);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.prog{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+.prog .te{font:400 12px/1 'DM Sans';color:rgba(255,255,255,.7);min-width:30px;}
+.bar{position:relative;flex:1;height:5px;border-radius:99px;background:rgba(255,255,255,.22);cursor:pointer;}
+.bar .f{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:#fff;width:0;}
+.bar .k{position:absolute;top:50%;width:12px;height:12px;border-radius:99px;background:#fff;transform:translate(-50%,-50%);left:0;}
+.tr{display:flex;align-items:center;justify-content:center;gap:26px;}
+.tr button{display:inline-flex;align-items:center;justify-content:center;border:none;background:transparent;color:rgba(255,255,255,.9);cursor:pointer;width:48px;height:48px;}
+.tr .pp{width:74px;height:74px;border-radius:99px;background:#fff;color:#07303f;}
+.gcol{flex:1;display:flex;flex-direction:column;gap:10px;min-width:0;}
+.glist{flex:1;display:flex;flex-direction:column;gap:9px;}
+.grow{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);cursor:pointer;}
+.gtext{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.gn{font:600 15px/1.2 'DM Sans';color:rgba(255,255,255,.92);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.gs{font:500 11px/1 'DM Sans';letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;color:rgba(255,255,255,.45);}
+.grow.grp{background:rgba(0,204,204,.1);border-color:rgba(0,204,204,.4);} .grow.grp .gs{color:#7fe9ef;}
+.grow.master{border-color:rgba(24,178,196,.5);} .grow.master .gs{color:#7fe9ef;}
+.gtog{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:none;border-radius:99px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);cursor:pointer;flex:none;}
+.grow.grp .gtog,.grow.master .gtog{background:#00CCCC;color:#06303d;}
+.grow.master .gtog{background:#18b2c4;}
+.volrow{position:relative;display:flex;align-items:center;gap:16px;padding:16px 20px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);}
+.slider{position:relative;height:20px;display:flex;align-items:center;cursor:pointer;touch-action:none;flex:1;}
+.slider .strack{position:relative;width:100%;height:6px;border-radius:99px;background:rgba(255,255,255,.2);}
+.slider .sfill{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,#0c6678,#18b2c4);width:0;}
+.slider .sknob{position:absolute;top:50%;width:18px;height:18px;border-radius:99px;background:#fff;transform:translate(-50%,-50%);left:0;}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:99px;font:600 14px/1 'DM Sans';cursor:pointer;white-space:nowrap;padding:10px 16px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.18);}
+.btn.act{background:#18b2c4;color:#06303d;border-color:transparent;}
+.mvol.act{background:#fff;color:#06303d;border:none;}
+.pop{position:absolute;bottom:calc(100% + 12px);right:0;width:340px;max-width:calc(100vw - 32px);padding:18px;border-radius:16px;background:#0a2f3c;border:1px solid rgba(255,255,255,.14);z-index:30;}
+.pophead,.prhead,.rowlabel{display:flex;align-items:center;justify-content:space-between;}
+.popcnt{font:600 12px/1 'DM Sans';color:#7fe9ef;}
+.popmaster{display:flex;flex-direction:column;gap:8px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,.12);margin-top:16px;}
+.poprows{display:flex;flex-direction:column;gap:16px;margin-top:16px;}
+.prn{font:600 14px/1 'DM Sans';color:#fff;}
+.prr{display:flex;align-items:center;gap:10px;}
+.prdef{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.82);font:600 11px/1 'DM Sans';cursor:pointer;}
+.prpct{font:700 12px/1 'DM Sans';color:#7fe9ef;min-width:34px;text-align:right;}
+.sm .strack{background:rgba(255,255,255,.15);} .sm .sfill{background:#18b2c4;}
+.rowlabel{display:flex;align-items:center;justify-content:space-between;}
+.popset{margin-top:18px;width:100%;padding:11px;border-radius:10px;border:none;background:#0066FF;color:#fff;font:600 14px/1 'DM Sans';cursor:pointer;}
+.panel{flex:none;width:386px;display:flex;flex-direction:column;gap:16px;padding:24px;border-radius:20px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);}
+.abbtn{display:flex;align-items:center;gap:14px;padding:16px;border-radius:16px;border:1px solid rgba(0,102,255,.5);background:linear-gradient(135deg,rgba(0,102,255,.28),rgba(0,204,204,.2));color:#fff;cursor:pointer;text-align:left;}
+.abic{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.16);flex:none;}
+.abt1{display:block;font:700 16px/1.2 'DM Sans';}
+.abt2{display:block;font:400 13px/1.3 'DM Sans';color:rgba(255,255,255,.7);margin-top:3px;}
+.grid{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:12px;overflow:auto;}
+.tile{position:relative;display:flex;flex-direction:column;justify-content:flex-end;padding:14px;border-radius:14px;min-height:118px;border:none;cursor:pointer;text-align:left;overflow:hidden;color:#fff;}
+.tile .tscrim{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.55),transparent 60%);}
+.tile .tn{position:relative;font:700 15px/1.15 'DM Sans';color:#fff;}
+.root.narrow .wrap{flex-direction:column;gap:24px;padding:28px;}
+.root.narrow .panel{width:auto;}
+.root.stack .player{flex-direction:column;}
+.root.stack .art{width:100%;height:auto;aspect-ratio:1/1;}
+.root.phone .volrow{flex-wrap:wrap;}
+</style>
+<div class="root">
+  <div class="wash"></div><div class="blob b1"></div><div class="blob b2"></div>
+  <div class="wrap">
+    <div class="left">
+      <div class="col"><span class="ovl">Speakers — tap to set master</span><div class="pillrow">${pills}</div></div>
+      <div class="player">
+        <div class="art">
+          <img class="cover" alt="" style="display:none">
+          <div class="scrim">
+            <div class="np"><div class="eq"><span></span><span></span><span></span><span></span></div>
+              <div class="npt"><div class="t1">—</div><div class="t2"></div></div></div>
+            <div class="prog"><span class="te el">0:00</span>
+              <div class="bar"><div class="f"></div><div class="k"></div></div>
+              <span class="te du">0:00</span></div>
+            <div class="tr">
+              <button class="prev"></button>
+              <button class="pp"></button>
+              <button class="next"></button>
+            </div>
+          </div>
+        </div>
+        <div class="gcol"><span class="ovl">Tap to add to group</span><div class="glist">${grows}</div></div>
+      </div>
+      <div class="volrow">
+        <span class="vic">${svg(ICON.vol, 20)}</span>
+        <div class="slider master"><div class="strack"><div class="sfill"></div><div class="sknob"></div></div></div>
+        <div style="position:relative">
+          <button class="btn drop"><span class="dlabel"></span>${svg(ICON.chev, 16)}</button>
+          <div class="pop" style="display:none">
+            <div class="pophead"><span class="ovl">Group volume</span><span class="popcnt"></span></div>
+            <div class="popmaster"><div class="rowlabel"><span style="font:700 14px/1 'DM Sans'">All rooms</span><span class="allpct" style="font:700 12px/1 'DM Sans'"></span></div>
+              <div class="slider master sm"><div class="strack"><div class="sfill" style="background:linear-gradient(90deg,#0c6678,#18b2c4)"></div><div class="sknob"></div></div></div></div>
+            <div class="poprows">${popRooms}</div>
+            <button class="popset">Set all to master volume</button>
+          </div>
+        </div>
+        <button class="btn mvol act">${svg(ICON.bars, 16)}Master volume</button>
+      </div>
+    </div>
+    <div class="panel">
+      <span class="ovl">Audiobook</span>
+      <button class="abbtn"><span class="abic">${svg(ICON.book, 22)}</span><span style="min-width:0"><span class="abt1">Play current audiobook</span><span class="abt2">Resume where you left off</span></span></button>
+      <span class="ovl" style="margin-top:4px">Apple Music playlists</span>
+      <div class="grid">${tiles}</div>
+    </div>
+  </div>
+</div>`;
+
+    const $ = (s) => root.querySelector(s);
+    this._root = $(".root");
+    this.$ = {
+      wash: $(".wash"), b1: $(".b1"), b2: $(".b2"), art: $(".art"), cover: $(".cover"),
+      eq: $(".eq"), t1: $(".t1"), t2: $(".t2"), el: $(".el"), du: $(".du"),
+      barF: $(".bar .f"), barK: $(".bar .k"), bar: $(".bar"),
+      prev: $(".prev"), pp: $(".pp"), next: $(".next"),
+      pills: [...root.querySelectorAll(".pill")], grows: [...root.querySelectorAll(".grow")],
+      mFill: $(".slider.master .sfill"), mKnob: $(".slider.master .sknob"),
+      drop: $(".drop"), dlabel: $(".dlabel"), pop: $(".pop"), popcnt: $(".popcnt"),
+      allpct: $(".allpct"), mvol: $(".mvol"),
+      abbtn: $(".abbtn"), abt1: $(".abt1"), abt2: $(".abt2"),
+      tiles: [...root.querySelectorAll(".tile")], prows: [...root.querySelectorAll(".prow")],
+      masterSliders: [...root.querySelectorAll(".slider.master")],
+    };
+
+    // events
+    this.$.pills.forEach((el) => el.addEventListener("click", () => this._setMaster(+el.dataset.room)));
+    this.$.grows.forEach((el) => el.addEventListener("click", () => this._toggleGroup(+el.dataset.room)));
+    this.$.prev.addEventListener("click", () => this._prev());
+    this.$.next.addEventListener("click", () => this._next());
+    this.$.pp.addEventListener("click", () => this._svc("media_player", "media_play_pause", { entity_id: this._masterRoom().entity }));
+    this.$.bar.addEventListener("pointerdown", (e) => this._seekDrag(e));
+    this.$.masterSliders.forEach((el) => el.addEventListener("pointerdown", (e) => this._volDrag(e, "master")));
+    this.$.prows.forEach((el) => {
+      el.querySelector(".slider").addEventListener("pointerdown", (e) => this._volDrag(e, +el.dataset.room));
+      el.querySelector(".prdef").addEventListener("click", () => this._setVol(this._rooms[+el.dataset.room], this._rooms[+el.dataset.room].def, true));
+    });
+    this.$.drop.addEventListener("click", (e) => { e.stopPropagation(); this._open = !this._open; this.$.mvol.classList.toggle("act", false); this._update(); });
+    this.$.mvol.addEventListener("click", () => this._syncMaster());
+    $(".popset").addEventListener("click", () => this._syncMaster());
+    this.$.tiles.forEach((el) => el.addEventListener("click", () => this._playPlaylist(+el.dataset.pl)));
+    this.$.abbtn.addEventListener("click", () => this._svc("script", this._abResume.replace(/^script\./, ""), {}));
+    this._onDoc = (e) => { if (this._open && !e.composedPath().includes(this.$.pop) && e.composedPath().indexOf(this.$.drop) < 0) { this._open = false; this._update(); } };
+    document.addEventListener("click", this._onDoc);
+    this._resize();
+  }
+
+  _resize() {
+    if (!this._root) return;
+    const w = this._root.clientWidth;
+    this._root.classList.toggle("narrow", w < 1040);
+    this._root.classList.toggle("stack", w < 760);
+    this._root.classList.toggle("phone", w < 480);
+  }
+
+  _svc(d, s, data) { if (this._hass) this._hass.callService(d, s, data); }
+  _setMaster(i) {
+    const r = this._rooms[i];
+    if (this._masterEntity) this._svc("input_select", "select_option", { entity_id: this._masterEntity, option: r.masterOption });
+  }
+  _toggleGroup(i) {
+    const r = this._rooms[i];
+    if (r === this._masterRoom() || !r.groupBool) return;
+    this._svc("input_boolean", "toggle", { entity_id: r.groupBool });
+  }
+  _prev() { this._svc("media_player", "media_previous_track", { entity_id: this._masterRoom().entity }); }
+  _next() { this._svc("media_player", "media_next_track", { entity_id: this._masterRoom().entity }); }
+  _isBook(s) { return s && ["audiobook", "podcast"].includes(s.attributes.media_content_type); }
+  _playPlaylist(i) {
+    const p = this._playlists[i]; if (!p) return;
+    this._svc("script", this._playScript.replace(/^script\./, ""), { media_id: p.media_id, media_type: p.media_type || "playlist" });
+  }
+  _livePos(s) {
+    if (!s) return 0;
+    let pos = s.attributes.media_position || 0;
+    if (s.state === "playing" && s.attributes.media_position_updated_at)
+      pos += (Date.now() - new Date(s.attributes.media_position_updated_at).getTime()) / 1000;
+    return pos;
+  }
+
+  _seekDrag(e) {
+    const m = this._masterRoom(); const s = this._st(m.entity); const dur = s && s.attributes.media_duration;
+    if (!dur) return;
+    const track = this.$.bar; const rect = track.getBoundingClientRect();
+    const apply = (x, fire) => {
+      let p = Math.max(0, Math.min(1, (x - rect.left) / rect.width));
+      this.$.barF.style.width = p * 100 + "%"; this.$.barK.style.left = p * 100 + "%";
+      if (fire) this._svc("media_player", "media_seek", { entity_id: m.entity, seek_position: p * dur });
+    };
+    this._drag = { seek: true };
+    apply(e.clientX, false);
+    const move = (ev) => apply(ev.clientX, false);
+    const up = (ev) => { apply(ev.clientX, true); this._drag = null; window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+    window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);
+  }
+
+  _volDrag(e, key) {
+    e.preventDefault();
+    const track = e.currentTarget; const rect = track.getBoundingClientRect();
+    const grouped = this._grouped();
+    const apply = (x) => {
+      let p = Math.round(Math.max(0, Math.min(1, (x - rect.left) / rect.width)) * 100);
+      const now = Date.now();
+      if (key === "master") { this._drag = { master: true, val: p }; grouped.forEach((r) => { this._localVol[r.entity] = p; this._localVolAt[r.entity] = now; }); }
+      else { this._drag = { room: key, val: p }; this._localVol[this._rooms[key].entity] = p; this._localVolAt[this._rooms[key].entity] = now; }
+      this._update();
+    };
+    apply(e.clientX);
+    let last = 0;
+    const move = (ev) => { apply(ev.clientX); const n = Date.now(); if (n - last > 180) { last = n; this._commitVol(key); } };
+    const up = (ev) => { apply(ev.clientX); this._commitVol(key); this._drag = null; window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+    window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);
+  }
+  _commitVol(key) {
+    if (key === "master") this._grouped().forEach((r) => this._svc("media_player", "volume_set", { entity_id: r.entity, volume_level: this._localVol[r.entity] / 100 }));
+    else { const r = this._rooms[key]; this._svc("media_player", "volume_set", { entity_id: r.entity, volume_level: this._localVol[r.entity] / 100 }); }
+  }
+  _setVol(r, p, fire) { this._localVol[r.entity] = p; this._localVolAt[r.entity] = Date.now(); if (fire) this._svc("media_player", "volume_set", { entity_id: r.entity, volume_level: p / 100 }); this._update(); }
+  _syncMaster() {
+    const g = this._grouped(); const val = this._masterVal();
+    g.forEach((r) => this._svc("media_player", "volume_set", { entity_id: r.entity, volume_level: val / 100 }));
+    this._open = false; this._update();
+  }
+  _masterVal() {
+    if (this._drag && this._drag.master) return this._drag.val;
+    const g = this._grouped(); if (!g.length) return 0;
+    return Math.round(g.reduce((a, r) => a + this._vol(r), 0) / g.length);
+  }
+
+  _update() {
+    if (!this._hass || !this.$) return;
+    if (!this._drag) {
+      const now = Date.now();
+      for (const e in this._localVol) {
+        const st = this._st(e); const real = st && st.attributes.volume_level != null ? Math.round(st.attributes.volume_level * 100) : null;
+        if ((real != null && Math.abs(real - this._localVol[e]) <= 2) || now - (this._localVolAt[e] || 0) > 3000) { delete this._localVol[e]; delete this._localVolAt[e]; }
+      }
+    }
+    const m = this._masterRoom(); const s = this._st(m.entity); const a = (s && s.attributes) || {};
+    const grouped = this._grouped(); const gset = new Set(grouped.map((r) => r));
+    // wash from art
+    const pic = a.entity_picture || null;
+    this._applyWash(pic);
+    // cover
+    if (pic) { if (this.$.cover.getAttribute("src") !== pic) this.$.cover.src = pic; this.$.cover.style.display = ""; }
+    else this.$.cover.style.display = "none";
+    // pills
+    this._rooms.forEach((r, i) => {
+      const el = this.$.pills[i]; el.classList.toggle("master", r === m);
+      el.classList.toggle("grp", r !== m && gset.has(r));
+    });
+    // group rows
+    const playing = s && s.state === "playing";
+    this._rooms.forEach((r, i) => {
+      const el = this.$.grows[i]; const isM = r === m; const inG = gset.has(r) && !isM;
+      el.classList.toggle("master", isM); el.classList.toggle("grp", inG);
+      el.style.background = isM && this._pillColor ? this._pillColor : "";
+      const sub = el.querySelector(".gs"); const tog = el.querySelector(".gtog");
+      sub.textContent = isM ? (playing ? "Master · playing" : "Master") : inG ? "In group" : "Available";
+      tog.innerHTML = (isM || inG) ? svg(ICON.check, 18, 3) : svg(ICON.plus, 18, 2.4);
+    });
+    // now playing
+    const book = this._isBook(s);
+    this.$.t1.textContent = a.media_title || (s ? (s.state === "idle" ? "Nothing playing" : m.name) : "No data");
+    this.$.t2.textContent = a.media_artist || a.media_album_name || "";
+    this.$.eq.classList.toggle("on", !!playing);
+    this.$.pp.innerHTML = playing ? pauseIco : playIco;
+    if (!this._trSet) { this.$.prev.innerHTML = svg(ICON.prev, 26, 2); this.$.next.innerHTML = svg(ICON.next, 26, 2); this._trSet = 1; }
+    // progress
+    if (!(this._drag && this._drag.seek)) {
+      const pos = this._livePos(s); const dur = a.media_duration || 0;
+      const pct = dur ? Math.max(0, Math.min(100, (pos / dur) * 100)) : 0;
+      this.$.barF.style.width = pct + "%"; this.$.barK.style.left = pct + "%";
+      this.$.el.textContent = fmt(pos); this.$.du.textContent = dur ? fmt(dur) : "—";
+    }
+    // volume master slider
+    const mv = this._masterVal();
+    this.$.mFill.style.width = mv + "%"; this.$.mKnob.style.left = mv + "%";
+    this.$.dlabel.textContent = grouped.length ? `${m.name}${grouped.length > 1 ? " +" + (grouped.length - 1) : ""}` : m.name;
+    this.$.mvol.classList.toggle("act", !this._open);
+    this.$.drop.classList.toggle("act", this._open);
+    this.$.pop.style.display = this._open ? "" : "none";
+    if (this._open) {
+      this.$.popcnt.textContent = grouped.length + (grouped.length === 1 ? " room" : " rooms");
+      this.$.allpct.textContent = mv + "%";
+      this.$.masterSliders.forEach((sl) => { sl.querySelector(".sfill").style.width = mv + "%"; sl.querySelector(".sknob").style.left = mv + "%"; });
+      this._rooms.forEach((r, i) => {
+        const row = this.$.prows[i]; const show = gset.has(r); row.style.display = show ? "" : "none";
+        if (!show) return;
+        const v = this._vol(r);
+        row.querySelector(".prpct").textContent = v + "%";
+        row.querySelector(".sfill").style.width = v + "%"; row.querySelector(".sknob").style.left = v + "%";
+      });
+    }
+    // audiobook label
+    const ab = this._abSource ? this._st(this._abSource) : (book ? s : null);
+    if (ab && ab.attributes.media_title) {
+      const dur = ab.attributes.media_duration, pos = this._livePos(ab);
+      const left = dur ? ` · ${Math.max(0, Math.round((dur - pos) / 60))}m left` : "";
+      this.$.abt1.textContent = "Play current audiobook";
+      this.$.abt2.textContent = ab.attributes.media_title + left;
+    }
+  }
+
+  _applyWash(pic) {
+    if (pic === this._lastPic) return;
+    this._lastPic = pic;
+    if (!pic) return this._setWash(null);
+    const img = new Image(); img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const c = document.createElement("canvas"); c.width = c.height = 24;
+        const ctx = c.getContext("2d"); ctx.drawImage(img, 0, 0, 24, 24);
+        const d = ctx.getImageData(0, 0, 24, 24).data;
+        let r = 0, g = 0, b = 0, wsum = 0;
+        for (let i = 0; i < d.length; i += 4) {
+          const mx = Math.max(d[i], d[i + 1], d[i + 2]), mn = Math.min(d[i], d[i + 1], d[i + 2]);
+          const sat = mx === 0 ? 0 : (mx - mn) / mx; const w = 0.15 + sat;
+          r += d[i] * w; g += d[i + 1] * w; b += d[i + 2] * w; wsum += w;
+        }
+        this._setWash([r / wsum, g / wsum, b / wsum]);
+      } catch (e) { this._setWash(null); }
+    };
+    img.onerror = () => this._setWash(null);
+    img.src = pic;
+  }
+  _setWash(rgb) {
+    if (!this.$) return;
+    if (!rgb) {
+      this.$.wash.style.background = TEAL;
+      this.$.b1.style.background = "radial-gradient(circle,rgba(24,178,196,.45),transparent 65%)";
+      this.$.b2.style.background = "radial-gradient(circle,rgba(13,90,110,.6),transparent 65%)";
+      this._pillColor = null;
+    } else {
+      const [r, g, b] = rgb.map((x) => Math.max(0, Math.min(255, x)));
+      const dk = (f) => `rgb(${Math.round(r * f)},${Math.round(g * f)},${Math.round(b * f)})`;
+      this.$.wash.style.background = `linear-gradient(155deg,${dk(0.6)} 0%,${dk(0.34)} 52%,${dk(0.2)} 100%)`;
+      this.$.b1.style.background = `radial-gradient(circle,rgba(${r | 0},${g | 0},${b | 0},.5),transparent 65%)`;
+      this.$.b2.style.background = `radial-gradient(circle,${dk(0.55)},transparent 65%)`;
+      this._pillColor = `linear-gradient(135deg,${dk(0.95)},${dk(0.55)})`;
+    }
+    this.$.wash.style.opacity = ".55";
+    requestAnimationFrame(() => requestAnimationFrame(() => { if (this.$) this.$.wash.style.opacity = "1"; }));
+  }
+}
+
+customElements.define("fraser-music-card", TvhgcMusicCard);
+window.customCards = window.customCards || [];
+window.customCards.push({ type: "fraser-music-card", name: "Fraser Music Player", description: "Immersive multi-room music player", preview: false });

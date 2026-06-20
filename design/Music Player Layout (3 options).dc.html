@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;}
+    body{margin:0;}
+    @keyframes eq{0%,100%{transform:scaleY(.3);}50%{transform:scaleY(1);}}
+    @keyframes ambient{0%,100%{opacity:.5;}50%{opacity:.8;}}
+  </style>
+</helmet>
+
+<div style="font-family:'DM Sans',system-ui,sans-serif;background:#e7e5df;width:max-content;min-width:100%;min-height:100vh;box-sizing:border-box;padding:48px;display:flex;flex-direction:column;gap:40px;">
+
+  <div style="display:flex;flex-direction:column;gap:10px;max-width:1100px;">
+    <span style="font:700 12px/1.2 'DM Sans';letter-spacing:.16em;text-transform:uppercase;color:#6b7280;">Home Assistant · Multi-room audio</span>
+    <h1 style="font:700 34px/1.1 'DM Sans';letter-spacing:-0.01em;color:#1D365F;margin:0;">Music player — layout explorations</h1>
+    <p style="font:400 16px/1.5 'DM Sans';color:#4b5563;margin:0;max-width:760px;">Three takes on the same brief, each sized for a 1280×800 wall tablet. The master speaker's album art washes the whole surface; rooms run across the top and down the right of the art for grouping; controls sit on the art; volume and the group dropdown sit beneath; playlists are a separated panel to the right.</p>
+  </div>
+
+  <div style="display:flex;gap:64px;align-items:flex-start;">
+
+    <!-- ============================ OPTION A — IMMERSIVE TEAL ============================ -->
+    <div style="flex:none;width:1280px;">
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:16px;">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:9999px;background:#1D365F;color:#fff;font:700 13px/1 'DM Sans';">A</span>
+        <span style="font:700 18px/1.2 'DM Sans';color:#1D365F;">Immersive</span>
+        <span style="font:400 14px/1.4 'DM Sans';color:#6b7280;">Full-bleed art wash · controls float on the cover · glassy panels</span>
+      </div>
+
+      <div data-screen-label="Option A — Immersive" style="position:relative;width:1280px;height:800px;border-radius:24px;overflow:hidden;box-shadow:0 12px 28px rgba(29,54,95,.22),0 4px 8px rgba(17,24,39,.1);background:linear-gradient(155deg,#0c4a5a 0%,#0a3140 52%,#06222e 100%);">
+        <div style="position:absolute;top:-160px;left:-120px;width:620px;height:620px;border-radius:9999px;background:radial-gradient(circle,rgba(24,178,196,.45),transparent 65%);filter:blur(20px);animation:ambient 7s ease-in-out infinite;"></div>
+        <div style="position:absolute;bottom:-200px;right:120px;width:560px;height:560px;border-radius:9999px;background:radial-gradient(circle,rgba(13,90,110,.6),transparent 65%);filter:blur(20px);"></div>
+
+        <div style="position:relative;display:flex;gap:36px;padding:36px;height:100%;">
+
+          <!-- LEFT BLOCK -->
+          <div style="flex:1;display:flex;flex-direction:column;gap:22px;min-width:0;">
+
+            <!-- room row -->
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <span style="font:700 11px/1.2 'DM Sans';letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.55);">Speakers — tap to set master</span>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <span style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:9999px;background:linear-gradient(135deg,#18b2c4,#0c6678);color:#fff;font:600 14px/1 'DM Sans';box-shadow:0 4px 14px rgba(24,178,196,.4);"><span style="width:7px;height:7px;border-radius:9999px;background:#eafdff;"></span>Lounge<span style="font:700 9px/1 'DM Sans';letter-spacing:.12em;opacity:.85;padding-left:2px;">MASTER</span></span>
+                <span style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:9999px;background:rgba(0,204,204,.12);border:1px solid rgba(0,204,204,.45);color:rgba(255,255,255,.92);font:500 14px/1 'DM Sans';"><span style="width:7px;height:7px;border-radius:9999px;background:#00CCCC;"></span>Kitchen</span>
+                <span style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:9999px;background:rgba(0,204,204,.12);border:1px solid rgba(0,204,204,.45);color:rgba(255,255,255,.92);font:500 14px/1 'DM Sans';"><span style="width:7px;height:7px;border-radius:9999px;background:#00CCCC;"></span>Master Bedroom</span>
+                <span style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:9999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);color:rgba(255,255,255,.78);font:500 14px/1 'DM Sans';">Garage</span>
+                <span style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:9999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);color:rgba(255,255,255,.78);font:500 14px/1 'DM Sans';">Spare Room</span>
+                <span style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:9999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);color:rgba(255,255,255,.78);font:500 14px/1 'DM Sans';">Hall</span>
+              </div>
+            </div>
+
+            <!-- player row: art + group column -->
+            <div style="flex:1;display:flex;gap:22px;min-height:0;">
+
+              <!-- album art -->
+              <div style="position:relative;flex:none;width:498px;height:498px;border-radius:20px;overflow:hidden;box-shadow:0 22px 50px rgba(0,0,0,.45);background:linear-gradient(150deg,#1bb6c7 0%,#0c5f72 48%,#07303f 100%);">
+                <div style="position:absolute;top:-40px;right:-40px;width:260px;height:260px;border-radius:9999px;background:radial-gradient(circle,rgba(255,255,255,.32),transparent 60%);"></div>
+                <div style="position:absolute;top:24px;left:26px;width:30px;height:30px;border-radius:9999px;border:2px solid rgba(255,255,255,.65);"></div>
+                <div style="position:absolute;left:28px;top:70px;font:800 46px/0.95 'DM Sans';letter-spacing:-0.02em;color:rgba(255,255,255,.96);">Coast<br>lines</div>
+
+                <!-- controls scrim -->
+                <div style="position:absolute;left:0;right:0;bottom:0;padding:22px 26px 24px;background:linear-gradient(to top,rgba(4,22,30,.92),rgba(4,22,30,.55) 55%,transparent);">
+                  <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+                    <div style="display:flex;align-items:flex-end;gap:3px;height:16px;">
+                      <span style="width:3px;height:100%;background:#00e0e0;border-radius:2px;transform-origin:bottom;animation:eq .9s ease-in-out 0s infinite;"></span>
+                      <span style="width:3px;height:100%;background:#00e0e0;border-radius:2px;transform-origin:bottom;animation:eq .9s ease-in-out -.3s infinite;"></span>
+                      <span style="width:3px;height:100%;background:#00e0e0;border-radius:2px;transform-origin:bottom;animation:eq .9s ease-in-out -.15s infinite;"></span>
+                      <span style="width:3px;height:100%;background:#00e0e0;border-radius:2px;transform-origin:bottom;animation:eq .9s ease-in-out -.45s infinite;"></span>
+                    </div>
+                    <div style="min-width:0;">
+                      <div style="font:700 20px/1.2 'DM Sans';color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Tidal</div>
+                      <div style="font:400 14px/1.3 'DM Sans';color:rgba(255,255,255,.7);">Marlow Bay</div>
+                    </div>
+                  </div>
+                  <!-- progress -->
+                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+                    <span style="font:400 12px/1 'DM Sans';color:rgba(255,255,255,.7);">1:34</span>
+                    <div style="position:relative;flex:1;height:5px;border-radius:9999px;background:rgba(255,255,255,.22);">
+                      <div style="position:absolute;left:0;top:0;bottom:0;width:39%;border-radius:9999px;background:#fff;"></div>
+                      <div style="position:absolute;left:39%;top:50%;width:12px;height:12px;border-radius:9999px;background:#fff;transform:translate(-50%,-50%);box-shadow:0 1px 4px rgba(0,0,0,.4);"></div>
+                    </div>
+                    <span style="font:400 12px/1 'DM Sans';color:rgba(255,255,255,.7);">3:58</span>
+                  </div>
+                  <!-- transport -->
+                  <div style="display:flex;align-items:center;justify-content:center;gap:26px;">
+                    <button style="display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;border:none;background:transparent;color:rgba(255,255,255,.9);cursor:pointer;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg></button>
+                    <button style="display:inline-flex;align-items:center;justify-content:center;width:74px;height:74px;border-radius:9999px;border:none;background:#fff;color:#07303f;cursor:pointer;box-shadow:0 8px 22px rgba(0,0,0,.35);"><svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1.2"></rect><rect x="14" y="5" width="4" height="14" rx="1.2"></rect></svg></button>
+                    <button style="display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;border:none;background:transparent;color:rgba(255,255,255,.9);cursor:pointer;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg></button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- group column -->
+              <div style="flex:1;display:flex;flex-direction:column;gap:10px;min-width:0;">
+                <span style="font:700 11px/1.2 'DM Sans';letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.55);">Tap to add to group</span>
+                <div style="flex:1;display:flex;flex-direction:column;gap:9px;">
+                  <div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-radius:14px;background:linear-gradient(135deg,rgba(24,178,196,.3),rgba(12,102,120,.3));border:1px solid rgba(24,178,196,.5);">
+                    <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:600 15px/1.2 'DM Sans';color:#fff;">Lounge</span><span style="font:500 11px/1 'DM Sans';letter-spacing:.08em;text-transform:uppercase;color:#7fe9ef;">Master · playing</span></div>
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9999px;background:#18b2c4;color:#06303d;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                  </div>
+                  <div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-radius:14px;background:rgba(0,204,204,.1);border:1px solid rgba(0,204,204,.4);">
+                    <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:600 15px/1.2 'DM Sans';color:#fff;">Kitchen</span><span style="font:500 11px/1 'DM Sans';letter-spacing:.08em;text-transform:uppercase;color:#7fe9ef;">In group</span></div>
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9999px;background:#00CCCC;color:#06303d;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                  </div>
+                  <div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-radius:14px;background:rgba(0,204,204,.1);border:1px solid rgba(0,204,204,.4);">
+                    <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:600 15px/1.2 'DM Sans';color:#fff;">Master Bedroom</span><span style="font:500 11px/1 'DM Sans';letter-spacing:.08em;text-transform:uppercase;color:#7fe9ef;">In group</span></div>
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9999px;background:#00CCCC;color:#06303d;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                  </div>
+                  <div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);">
+                    <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:600 15px/1.2 'DM Sans';color:rgba(255,255,255,.92);">Garage</span><span style="font:500 11px/1 'DM Sans';letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.45);">Available</span></div>
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9999px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></span>
+                  </div>
+                  <div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);">
+                    <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:600 15px/1.2 'DM Sans';color:rgba(255,255,255,.92);">Spare Room</span><span style="font:500 11px/1 'DM Sans';letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.45);">Available</span></div>
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9999px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></span>
+                  </div>
+                  <div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);">
+                    <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:600 15px/1.2 'DM Sans';color:rgba(255,255,255,.92);">Hall</span><span style="font:500 11px/1 'DM Sans';letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.45);">Available</span></div>
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9999px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- volume row -->
+            <div style="display:flex;align-items:center;gap:16px;padding:16px 20px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);">
+              <span style="color:rgba(255,255,255,.85);display:inline-flex;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></span>
+              <div style="position:relative;flex:1;height:6px;border-radius:9999px;background:rgba(255,255,255,.2);">
+                <div style="position:absolute;left:0;top:0;bottom:0;width:58%;border-radius:9999px;background:linear-gradient(90deg,#0c6678,#18b2c4);"></div>
+                <div style="position:absolute;left:58%;top:50%;width:18px;height:18px;border-radius:9999px;background:#fff;transform:translate(-50%,-50%);box-shadow:0 2px 6px rgba(0,0,0,.4);"></div>
+              </div>
+              <button style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:9999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#fff;font:600 14px/1 'DM Sans';cursor:pointer;white-space:nowrap;">Lounge +2<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></button>
+              <button style="display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:9999px;background:#fff;border:none;color:#06303d;font:600 14px/1 'DM Sans';cursor:pointer;white-space:nowrap;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>Master volume</button>
+            </div>
+          </div>
+
+          <!-- PLAYLISTS PANEL -->
+          <div style="flex:none;width:386px;display:flex;flex-direction:column;gap:16px;padding:24px;border-radius:20px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(8px);">
+            <span style="font:700 11px/1.2 'DM Sans';letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.55);">Audiobook</span>
+            <button style="display:flex;align-items:center;gap:14px;padding:16px;border-radius:16px;border:1px solid rgba(0,102,255,.5);background:linear-gradient(135deg,rgba(0,102,255,.28),rgba(0,204,204,.2));color:#fff;cursor:pointer;text-align:left;">
+              <span style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.16);flex:none;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg></span>
+              <span style="min-width:0;"><span style="display:block;font:700 16px/1.2 'DM Sans';">Play current audiobook</span><span style="display:block;font:400 13px/1.3 'DM Sans';color:rgba(255,255,255,.7);margin-top:3px;">The Salt Path · 4h 12m left</span></span>
+            </button>
+
+            <span style="font:700 11px/1.2 'DM Sans';letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-top:4px;">Apple Music playlists</span>
+            <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div style="display:flex;flex-direction:column;justify-content:flex-end;padding:14px;border-radius:14px;background:linear-gradient(150deg,#1bb6c7,#0c5f72);min-height:0;"><span style="font:700 15px/1.15 'DM Sans';color:#fff;">Coastal Mornings</span><span style="font:400 12px/1.2 'DM Sans';color:rgba(255,255,255,.75);margin-top:3px;">48 songs</span></div>
+              <div style="display:flex;flex-direction:column;justify-content:flex-end;padding:14px;border-radius:14px;background:linear-gradient(150deg,#5a3fa6,#2f2170);min-height:0;"><span style="font:700 15px/1.15 'DM Sans';color:#fff;">Deep Focus</span><span style="font:400 12px/1.2 'DM Sans';color:rgba(255,255,255,.75);margin-top:3px;">120 songs</span></div>
+              <div style="display:flex;flex-direction:column;justify-content:flex-end;padding:14px;border-radius:14px;background:linear-gradient(150deg,#e8913a,#a8451f);min-height:0;"><span style="font:700 15px/1.15 'DM Sans';color:#fff;">Sunday Kitchen</span><span style="font:400 12px/1.2 'DM Sans';color:rgba(255,255,255,.75);margin-top:3px;">64 songs</span></div>
+              <div style="display:flex;flex-direction:column;justify-content:flex-end;padding:14px;border-radius:14px;background:linear-gradient(150deg,#2f5fae,#15336b);min-height:0;"><span style="font:700 15px/1.15 'DM Sans';color:#fff;">Evening Wind-down</span><span style="font:400 12px/1.2 'DM Sans';color:rgba(255,255,255,.75);margin-top:3px;">37 songs</span></div>
+              <div style="display:flex;flex-direction:column;justify-content:flex-end;padding:14px;border-radius:14px;background:linear-gradient(150deg,#c0395f,#7a1f3a);min-height:0;"><span style="font:700 15px/1.15 'DM Sans';color:#fff;">Workshop Energy</span><span style="font:400 12px/1.2 'DM Sans';color:rgba(255,255,255,.75);margin-top:3px;">82 songs</span></div>
+              <div style="display:flex;flex-direction:column;justify-content:flex-end;padding:14px;border-radius:14px;background:linear-gradient(150deg,#3f7d6b,#1f4a3d);min-height:0;"><span style="font:700 15px/1.15 'DM Sans';color:#fff;">Rainy Day Jazz</span><span style="font:400 12px/1.2 'DM Sans';color:rgba(255,255,255,.75);margin-top:3px;">55 songs</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================ OPTION B — STUDIO AMBER ============================ -->
+    <div style="flex:none;width:1280px;">
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:16px;">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:9999px;background:#1D365F;color:#fff;font:700 13px/1 'DM Sans';">B</span>
+        <span style="font:700 18px/1.2 'DM Sans';color:#1D365F;">Studio</span>
+        <span style="font:400 14px/1.4 'DM Sans';color:#6b7280;">Navy chrome warmed by the art · controls on their own bar · groups as a tidy list</span>
+      </div>
+
+      <div data-screen-label="Option B — Studio" style="position:relative;width:1280px;height:800px;border-radius:24px;overflow:hidden;box-shadow:0 12px 28px rgba(29,54,95,.22),0 4px 8px rgba(17,24,39,.1);background:linear-gradient(160deg,#10243f 0%,#0b1b32 60%,#081325 100%);">
+        <div style="position:absolute;top:-180px;left:-80px;width:680px;height:680px;border-radius:9999px;background:radial-gradient(circle,rgba(232,145,58,.4),transparent 62%);filter:blur(10px);animation:ambient 8s ease-in-out infinite;"></div>
+        <div style="position:absolute;bottom:-160px;left:40%;width:520px;height:520px;border-radius:9999px;background:radial-gradient(circle,rgba(201,98,42,.3),transparent 65%);filter:blur(10px);"></div>
+
+        <div style="position:relative;display:flex;gap:36px;padding:36px;height:100%;">
+
+          <!-- LEFT BLOCK -->
+          <div style="flex:1;display:flex;flex-direction:column;gap:20px;min-width:0;">
+
+            <!-- room row -->
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <span style="font:700 11px/1.2 'DM Sans';letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.5);">Speakers — tap to set master</span>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <span style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:9999px;background:linear-gradient(135deg,#eb9a44,#c0571f);color:#fff;font:600 14px/1 'DM Sans';box-shadow:0 4px 14px rgba(232,145,58,.4);"><span style="width:7px;height:7px;border-radius:9999px;background:#fff3e3;"></span>Lounge<span style="font:700 9px/1 'DM Sans';letter-spacing:.12em;opacity:.85;padding-left:2px;">MASTER</span></span>
+                <span style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:9999px;background:rgba(0,204,204,.12);border:1px solid rgba(0,204,204,.45);color:rgba(255,255,255,.92);font:500 14px/1 'DM Sans';"><span style="width:7px;height:7px;border-radius:9999px;background:#00CCCC;"></span>Kitchen</span>
+                <span style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:9999px;background:rgba(0,204,204,.12);border:1px solid rgba(0,204,204,.45);color:rgba(255,255,255,.92);font:500 14px/1 'DM Sans';"><span style="width:7px;height:7px;border-radius:9999px;background:#00CCCC;"></span>Master Bedroom</span>
+                <span style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:9999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);color:rgba(255,255,255,.78);font:500 14px/1 'DM Sans';">Garage</span>
+                <span style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:9999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);color:rgba(255,255,255,.78);font:500 14px/1 'DM Sans';">Spare Room</span>
+                <span style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:9999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);color:rgba(255,255,255,.78);font:500 14px/1 'DM Sans';">Hall</span>
+              </div>
+            </div>
+
+            <!-- player row -->
+            <div style="flex:1;display:flex;gap:22px;min-height:0;">
+
+              <!-- art + control bar -->
+              <div style="flex:none;width:430px;display:flex;flex-direction:column;gap:14px;">
+                <div style="position:relative;width:430px;height:430px;border-radius:18px;overflow:hidden;box-shadow:0 20px 44px rgba(0,0,0,.45);background:linear-gradient(150deg,#f3aa4f 0%,#c0571f 52%,#7c3315 100%);">
+                  <div style="position:absolute;top:-30px;right:-30px;width:220px;height:220px;border-radius:9999px;background:radial-gradient(circle,rgba(255,236,205,.4),transparent 60%);"></div>
+                  <div style="position:absolute;top:22px;left:24px;width:28px;height:28px;border-radius:9999px;border:2px solid rgba(255,255,255,.6);"></div>
+                  <div style="position:absolute;left:26px;bottom:26px;font:800 42px/0.95 'DM Sans';letter-spacing:-0.02em;color:rgba(255,255,255,.96);">Golden<br>Hour</div>
+                </div>
+
+                <!-- control bar -->
+                <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:12px;padding:16px 20px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);">
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="display:flex;align-items:flex-end;gap:3px;height:15px;">
+                      <span style="width:3px;height:100%;background:#f3aa4f;border-radius:2px;transform-origin:bottom;animation:eq .9s ease-in-out 0s infinite;"></span>
+                      <span style="width:3px;height:100%;background:#f3aa4f;border-radius:2px;transform-origin:bottom;animation:eq .9s ease-in-out -.3s infinite;"></span>
+                      <span style="width:3px;height:100%;background:#f3aa4f;border-radius:2px;transform-origin:bottom;animation:eq .9s ease-in-out -.15s infinite;"></span>
+                    </div>
+                    <div style="min-width:0;flex:1;"><div style="font:700 17px/1.2 'DM Sans';color:#fff;">Ember</div><div style="font:400 13px/1.2 'DM Sans';color:rgba(255,255,255,.65);">Aubrey Vale</div></div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font:400 11px/1 'DM Sans';color:rgba(255,255,255,.6);">2:05</span>
+                    <div style="position:relative;flex:1;height:5px;border-radius:9999px;background:rgba(255,255,255,.2);"><div style="position:absolute;left:0;top:0;bottom:0;width:52%;border-radius:9999px;background:#f3aa4f;"></div><div style="position:absolute;left:52%;top:50%;width:11px;height:11px;border-radius:9999px;background:#fff;transform:translate(-50%,-50%);"></div></div>
+                    <span style="font:400 11px/1 'DM Sans';color:rgba(255,255,255,.6);">4:01</span>
+                  </div>
+                  <div style="display:flex;align-items:center;justify-content:center;gap:24px;">
+                    <button style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border:none;background:transparent;color:rgba(255,255,255,.9);cursor:pointer;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg></button>
+                    <button style="display:inline-flex;align-items:center;justify-content:center;width:62px;height:62px;border-radius:9999px;border:none;background:#f3aa4f;color:#5c2710;cursor:pointer;box-shadow:0 8px 20px rgba(243,170,79,.4);"><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1.2"></rect><rect x="14" y="5" width="4" height="14" rx="1.2"></rect></svg></button>
+                    <button style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border:none;background:transparent;color:rgba(255,255,255,.9);cursor:pointer;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg></button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- group column -->
+              <div style="flex:1;display:flex;flex-direction:column;gap:10px;min-width:0;">
+                <span style="font:700 11px/1.2 'DM Sans';letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.5);">Tap to add to group</span>
+                <div style="flex:1;display:flex;flex-direction:column;gap:8px;">
+                  <div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-radius:12px;background:rgba(243,170,79,.16);border:1px solid rgba(243,170,79,.5);">
+                    <div style="display:flex;align-items:center;gap:12px;"><span style="width:9px;height:9px;border-radius:9999px;background:#f3aa4f;"></span><div style="display:flex;flex-direction:column;"><span style="font:600 15px/1.2 'DM Sans';color:#fff;">Lounge</span><span style="font:500 11px/1.2 'DM Sans';letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.55);">Master · playing</span></div></div>
+                    <span style="font:600 12px/1 'DM Sans';letter-spacing:.06em;text-transform:uppercase;color:#f3aa4f;">Master</span>
+                  </div>
+                  <div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-radius:12px;background:rgba(0,204,204,.1);border:1px solid rgba(0,204,204,.4);">
+                    <div style="display:flex;align-items:center;gap:12px;"><span style="width:9px;height:9px;border-radius:9999px;background:#00CCCC;"></span><span style="font:600 15px/1.2 'DM Sans';color:#fff;">Kitchen</span></div>
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:9999px;background:#00CCCC;color:#063;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#06303d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                  </div>
+                  <div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-radius:12px;background:rgba(0,204,204,.1);border:1px solid rgba(0,204,204,.4);">
+                    <div style="display:flex;align-items:center;gap:12px;"><span style="width:9px;height:9px;border-radius:9999px;background:#00CCCC;"></span><span style="font:600 15px/1.2 'DM Sans';color:#fff;">Master Bedroom</span></div>
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:9999px;background:#00CCCC;color:#063;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#06303d" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                  </div>
+                  <div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);">
+                    <div style="display:flex;align-items:center;gap:12px;"><span style="width:9px;height:9px;border-radius:9999px;background:rgba(255,255,255,.3);"></span><span style="font:500 15px/1.2 'DM Sans';color:rgba(255,255,255,.9);">Garage</span></div>
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:9999px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></span>
+                  </div>
+                  <div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);">
+                    <div style="display:flex;align-items:center;gap:12px;"><span style="width:9px;height:9px;border-radius:9999px;background:rgba(255,255,255,.3);"></span><span style="font:500 15px/1.2 'DM Sans';color:rgba(255,255,255,.9);">Spare Room</span></div>
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:9999px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></span>
+                  </div>
+                  <div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);">
+                    <div style="display:flex;align-items:center;gap:12px;"><span style="width:9px;height:9px;border-radius:9999px;background:rgba(255,255,255,.3);"></span><span style="font:500 15px/1.2 'DM Sans';color:rgba(255,255,255,.9);">Hall</span></div>
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:9999px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- volume row -->
+            <div style="display:flex;align-items:center;gap:16px;padding:16px 20px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);">
+              <span style="color:rgba(255,255,255,.85);display:inline-flex;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></span>
+              <div style="position:relative;flex:1;height:6px;border-radius:9999px;background:rgba(255,255,255,.2);">
+                <div style="position:absolute;left:0;top:0;bottom:0;width:64%;border-radius:9999px;background:linear-gradient(90deg,#c0571f,#f3aa4f);"></div>
+                <div style="position:absolute;left:64%;top:50%;width:18px;height:18px;border-radius:9999px;background:#fff;transform:translate(-50%,-50%);box-shadow:0 2px 6px rgba(0,0,0,.4);"></div>
+              </div>
+              <button style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:9999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#fff;font:600 14px/1 'DM Sans';cursor:pointer;white-space:nowrap;">3 rooms<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></button>
+              <button style="display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:9999px;background:#0066FF;border:none;color:#fff;font:600 14px/1 'DM Sans';cursor:pointer;white-space:nowrap;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>Master volume</button>
+            </div>
+          </div>
+
+          <!-- PLAYLISTS PANEL -->
+          <div style="flex:none;width:386px;display:flex;flex-direction:column;gap:14px;padding:24px;border-radius:20px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);">
+            <span style="font:700 11px/1.2 'DM Sans';letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.5);">Audiobook</span>
+            <button style="display:flex;align-items:center;gap:14px;padding:15px;border-radius:14px;border:1px solid rgba(0,102,255,.5);background:rgba(0,102,255,.18);color:#fff;cursor:pointer;text-align:left;">
+              <span style="display:inline-flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:11px;background:rgba(255,255,255,.14);flex:none;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg></span>
+              <span style="min-width:0;"><span style="display:block;font:700 16px/1.2 'DM Sans';">Play current audiobook</span><span style="display:block;font:400 13px/1.3 'DM Sans';color:rgba(255,255,255,.7);margin-top:3px;">The Salt Path · 4h 12m left</span></span>
+            </button>
+
+            <span style="font:700 11px/1.2 'DM Sans';letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-top:4px;">Apple Music playlists</span>
+            <div style="flex:1;display:flex;flex-direction:column;gap:9px;">
+              <button style="display:flex;align-items:center;gap:13px;padding:11px 13px;border-radius:13px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#fff;cursor:pointer;text-align:left;"><span style="width:42px;height:42px;border-radius:10px;flex:none;background:linear-gradient(150deg,#1bb6c7,#0c5f72);"></span><span style="flex:1;min-width:0;"><span style="display:block;font:600 15px/1.2 'DM Sans';">Coastal Mornings</span><span style="display:block;font:400 12px/1.2 'DM Sans';color:rgba(255,255,255,.55);margin-top:2px;">48 songs</span></span><svg width="20" height="20" viewBox="0 0 24 24" fill="rgba(255,255,255,.85)"><path d="M7 5v14l12-7z"></path></svg></button>
+              <button style="display:flex;align-items:center;gap:13px;padding:11px 13px;border-radius:13px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#fff;cursor:pointer;text-align:left;"><span style="width:42px;height:42px;border-radius:10px;flex:none;background:linear-gradient(150deg,#5a3fa6,#2f2170);"></span><span style="flex:1;min-width:0;"><span style="display:block;font:600 15px/1.2 'DM Sans';">Deep Focus</span><span style="display:block;font:400 12px/1.2 'DM Sans';color:rgba(255,255,255,.55);margin-top:2px;">120 songs</span></span><svg width="20" height="20" viewBox="0 0 24 24" fill="rgba(255,255,255,.85)"><path d="M7 5v14l12-7z"></path></svg></button>
+              <button style="display:flex;align-items:center;gap:13px;padding:11px 13px;border-radius:13px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#fff;cursor:pointer;text-align:left;"><span style="width:42px;height:42px;border-radius:10px;flex:none;background:linear-gradient(150deg,#e8913a,#a8451f);"></span><span style="flex:1;min-width:0;"><span style="display:block;font:600 15px/1.2 'DM Sans';">Sunday Kitchen</span><span style="display:block;font:400 12px/1.2 'DM Sans';color:rgba(255,255,255,.55);margin-top:2px;">64 songs</span></span><svg width="20" height="20" viewBox="0 0 24 24" fill="rgba(255,255,255,.85)"><path d="M7 5v14l12-7z"></path></svg></button>
+              <button style="display:flex;align-items:center;gap:13px;padding:11px 13px;border-radius:13px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#fff;cursor:pointer;text-align:left;"><span style="width:42px;height:42px;border-radius:10px;flex:none;background:linear-gradient(150deg,#2f5fae,#15336b);"></span><span style="flex:1;min-width:0;"><span style="display:block;font:600 15px/1.2 'DM Sans';">Evening Wind-down</span><span style="display:block;font:400 12px/1.2 'DM Sans';color:rgba(255,255,255,.55);margin-top:2px;">37 songs</span></span><svg width="20" height="20" viewBox="0 0 24 24" fill="rgba(255,255,255,.85)"><path d="M7 5v14l12-7z"></path></svg></button>
+              <button style="display:flex;align-items:center;gap:13px;padding:11px 13px;border-radius:13px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#fff;cursor:pointer;text-align:left;"><span style="width:42px;height:42px;border-radius:10px;flex:none;background:linear-gradient(150deg,#c0395f,#7a1f3a);"></span><span style="flex:1;min-width:0;"><span style="display:block;font:600 15px/1.2 'DM Sans';">Workshop Energy</span><span style="display:block;font:400 12px/1.2 'DM Sans';color:rgba(255,255,255,.55);margin-top:2px;">82 songs</span></span><svg width="20" height="20" viewBox="0 0 24 24" fill="rgba(255,255,255,.85)"><path d="M7 5v14l12-7z"></path></svg></button>
+              <button style="display:flex;align-items:center;gap:13px;padding:11px 13px;border-radius:13px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#fff;cursor:pointer;text-align:left;"><span style="width:42px;height:42px;border-radius:10px;flex:none;background:linear-gradient(150deg,#3f7d6b,#1f4a3d);"></span><span style="flex:1;min-width:0;"><span style="display:block;font:600 15px/1.2 'DM Sans';">Rainy Day Jazz</span><span style="display:block;font:400 12px/1.2 'DM Sans';color:rgba(255,255,255,.55);margin-top:2px;">55 songs</span></span><svg width="20" height="20" viewBox="0 0 24 24" fill="rgba(255,255,255,.85)"><path d="M7 5v14l12-7z"></path></svg></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================ OPTION C — DAYLIGHT VIOLET ============================ -->
+    <div style="flex:none;width:1280px;">
+      <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:16px;">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:9999px;background:#1D365F;color:#fff;font:700 13px/1 'DM Sans';">C</span>
+        <span style="font:700 18px/1.2 'DM Sans';color:#1D365F;">Daylight</span>
+        <span style="font:400 14px/1.4 'DM Sans';color:#6b7280;">Lighter wash on white cards · the TVHGC light theme's cousin · airy and legible</span>
+      </div>
+
+      <div data-screen-label="Option C — Daylight" style="position:relative;width:1280px;height:800px;border-radius:24px;overflow:hidden;box-shadow:0 12px 28px rgba(29,54,95,.18),0 4px 8px rgba(17,24,39,.08);background:linear-gradient(160deg,#ece4f7 0%,#e4dbf2 55%,#f4f1f9 100%);">
+        <div style="position:absolute;top:-160px;left:-60px;width:600px;height:600px;border-radius:9999px;background:radial-gradient(circle,rgba(122,92,196,.45),transparent 62%);filter:blur(8px);animation:ambient 9s ease-in-out infinite;"></div>
+        <div style="position:absolute;bottom:-200px;right:-40px;width:520px;height:520px;border-radius:9999px;background:radial-gradient(circle,rgba(90,63,166,.28),transparent 65%);filter:blur(8px);"></div>
+
+        <div style="position:relative;display:flex;gap:36px;padding:36px;height:100%;">
+
+          <!-- LEFT BLOCK -->
+          <div style="flex:1;display:flex;flex-direction:column;gap:20px;min-width:0;">
+
+            <!-- room row -->
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <span style="font:700 11px/1.2 'DM Sans';letter-spacing:.16em;text-transform:uppercase;color:#6b5b86;">Speakers — tap to set master</span>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <span style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:9999px;background:linear-gradient(135deg,#7a5cc4,#4f3596);color:#fff;font:600 14px/1 'DM Sans';box-shadow:0 4px 14px rgba(122,92,196,.45);"><span style="width:7px;height:7px;border-radius:9999px;background:#efeaff;"></span>Lounge<span style="font:700 9px/1 'DM Sans';letter-spacing:.12em;opacity:.85;padding-left:2px;">MASTER</span></span>
+                <span style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:9999px;background:#fff;border:1px solid #00b0b0;color:#0a5a5a;font:600 14px/1 'DM Sans';box-shadow:0 1px 3px rgba(17,24,39,.08);"><span style="width:7px;height:7px;border-radius:9999px;background:#00CCCC;"></span>Kitchen</span>
+                <span style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:9999px;background:#fff;border:1px solid #00b0b0;color:#0a5a5a;font:600 14px/1 'DM Sans';box-shadow:0 1px 3px rgba(17,24,39,.08);"><span style="width:7px;height:7px;border-radius:9999px;background:#00CCCC;"></span>Master Bedroom</span>
+                <span style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:9999px;background:rgba(255,255,255,.7);border:1px solid #d7cfe6;color:#4b4364;font:500 14px/1 'DM Sans';">Garage</span>
+                <span style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:9999px;background:rgba(255,255,255,.7);border:1px solid #d7cfe6;color:#4b4364;font:500 14px/1 'DM Sans';">Spare Room</span>
+                <span style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:9999px;background:rgba(255,255,255,.7);border:1px solid #d7cfe6;color:#4b4364;font:500 14px/1 'DM Sans';">Hall</span>
+              </div>
+            </div>
+
+            <!-- player row -->
+            <div style="flex:1;display:flex;gap:22px;min-height:0;">
+
+              <!-- album art card -->
+              <div style="flex:none;width:498px;height:100%;border-radius:20px;background:#fff;border:1px solid #e2dcef;box-shadow:0 12px 28px rgba(79,53,150,.16);padding:16px;display:flex;flex-direction:column;">
+                <div style="position:relative;flex:1;border-radius:14px;overflow:hidden;background:linear-gradient(150deg,#8a6fd4 0%,#5a3fa6 50%,#3a2878 100%);">
+                  <div style="position:absolute;top:-30px;right:-30px;width:220px;height:220px;border-radius:9999px;background:radial-gradient(circle,rgba(255,255,255,.3),transparent 60%);"></div>
+                  <div style="position:absolute;top:22px;left:24px;width:28px;height:28px;border-radius:9999px;border:2px solid rgba(255,255,255,.6);"></div>
+                  <div style="position:absolute;left:26px;top:64px;font:800 44px/0.95 'DM Sans';letter-spacing:-0.02em;color:rgba(255,255,255,.96);">Violet<br>Hour</div>
+
+                  <!-- overlaid controls -->
+                  <div style="position:absolute;left:0;right:0;bottom:0;padding:20px 24px 22px;background:linear-gradient(to top,rgba(40,26,78,.9),rgba(40,26,78,.4) 60%,transparent);">
+                    <div style="display:flex;align-items:center;gap:11px;margin-bottom:12px;">
+                      <div style="display:flex;align-items:flex-end;gap:3px;height:15px;">
+                        <span style="width:3px;height:100%;background:#c9b8ff;border-radius:2px;transform-origin:bottom;animation:eq .9s ease-in-out 0s infinite;"></span>
+                        <span style="width:3px;height:100%;background:#c9b8ff;border-radius:2px;transform-origin:bottom;animation:eq .9s ease-in-out -.3s infinite;"></span>
+                        <span style="width:3px;height:100%;background:#c9b8ff;border-radius:2px;transform-origin:bottom;animation:eq .9s ease-in-out -.15s infinite;"></span>
+                      </div>
+                      <div style="flex:1;min-width:0;"><div style="font:700 19px/1.2 'DM Sans';color:#fff;">Northerly</div><div style="font:400 13px/1.2 'DM Sans';color:rgba(255,255,255,.72);">Cass Bramble</div></div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+                      <span style="font:400 12px/1 'DM Sans';color:rgba(255,255,255,.72);">0:48</span>
+                      <div style="position:relative;flex:1;height:5px;border-radius:9999px;background:rgba(255,255,255,.25);"><div style="position:absolute;left:0;top:0;bottom:0;width:28%;border-radius:9999px;background:#fff;"></div><div style="position:absolute;left:28%;top:50%;width:11px;height:11px;border-radius:9999px;background:#fff;transform:translate(-50%,-50%);"></div></div>
+                      <span style="font:400 12px/1 'DM Sans';color:rgba(255,255,255,.72);">3:12</span>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:center;gap:24px;">
+                      <button style="display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;border:none;background:transparent;color:rgba(255,255,255,.9);cursor:pointer;"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg></button>
+                      <button style="display:inline-flex;align-items:center;justify-content:center;width:66px;height:66px;border-radius:9999px;border:none;background:#fff;color:#3a2878;cursor:pointer;box-shadow:0 8px 20px rgba(0,0,0,.3);"><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1.2"></rect><rect x="14" y="5" width="4" height="14" rx="1.2"></rect></svg></button>
+                      <button style="display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;border:none;background:transparent;color:rgba(255,255,255,.9);cursor:pointer;"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- group column -->
+              <div style="flex:1;display:flex;flex-direction:column;gap:10px;min-width:0;">
+                <span style="font:700 11px/1.2 'DM Sans';letter-spacing:.16em;text-transform:uppercase;color:#6b5b86;">Tap to add to group</span>
+                <div style="flex:1;display:flex;flex-direction:column;gap:9px;">
+                  <div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-radius:14px;background:#f3eeff;border:1px solid #b9a3e8;box-shadow:0 1px 3px rgba(79,53,150,.1);">
+                    <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:600 15px/1.2 'DM Sans';color:#2f2160;">Lounge</span><span style="font:600 11px/1 'DM Sans';letter-spacing:.06em;text-transform:uppercase;color:#7a5cc4;">Master · playing</span></div>
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9999px;background:#7a5cc4;color:#fff;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                  </div>
+                  <div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-radius:14px;background:#e6fafa;border:1px solid #8fdede;box-shadow:0 1px 3px rgba(17,24,39,.05);">
+                    <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:600 15px/1.2 'DM Sans';color:#0a4a4a;">Kitchen</span><span style="font:600 11px/1 'DM Sans';letter-spacing:.06em;text-transform:uppercase;color:#0a8a8a;">In group</span></div>
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9999px;background:#00CCCC;color:#fff;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                  </div>
+                  <div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-radius:14px;background:#e6fafa;border:1px solid #8fdede;box-shadow:0 1px 3px rgba(17,24,39,.05);">
+                    <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:600 15px/1.2 'DM Sans';color:#0a4a4a;">Master Bedroom</span><span style="font:600 11px/1 'DM Sans';letter-spacing:.06em;text-transform:uppercase;color:#0a8a8a;">In group</span></div>
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9999px;background:#00CCCC;color:#fff;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                  </div>
+                  <div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-radius:14px;background:#fff;border:1px solid #e2dcef;box-shadow:0 1px 3px rgba(17,24,39,.05);">
+                    <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:500 15px/1.2 'DM Sans';color:#3a3358;">Garage</span><span style="font:500 11px/1 'DM Sans';letter-spacing:.06em;text-transform:uppercase;color:#9a92ad;">Available</span></div>
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9999px;background:#f0ecf7;color:#7a5cc4;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></span>
+                  </div>
+                  <div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-radius:14px;background:#fff;border:1px solid #e2dcef;box-shadow:0 1px 3px rgba(17,24,39,.05);">
+                    <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:500 15px/1.2 'DM Sans';color:#3a3358;">Spare Room</span><span style="font:500 11px/1 'DM Sans';letter-spacing:.06em;text-transform:uppercase;color:#9a92ad;">Available</span></div>
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9999px;background:#f0ecf7;color:#7a5cc4;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></span>
+                  </div>
+                  <div style="flex:1;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-radius:14px;background:#fff;border:1px solid #e2dcef;box-shadow:0 1px 3px rgba(17,24,39,.05);">
+                    <div style="display:flex;flex-direction:column;gap:2px;"><span style="font:500 15px/1.2 'DM Sans';color:#3a3358;">Hall</span><span style="font:500 11px/1 'DM Sans';letter-spacing:.06em;text-transform:uppercase;color:#9a92ad;">Available</span></div>
+                    <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9999px;background:#f0ecf7;color:#7a5cc4;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- volume row -->
+            <div style="display:flex;align-items:center;gap:16px;padding:16px 20px;border-radius:16px;background:#fff;border:1px solid #e2dcef;box-shadow:0 1px 3px rgba(17,24,39,.06);">
+              <span style="color:#4f3596;display:inline-flex;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg></span>
+              <div style="position:relative;flex:1;height:6px;border-radius:9999px;background:#e4ddf0;">
+                <div style="position:absolute;left:0;top:0;bottom:0;width:54%;border-radius:9999px;background:linear-gradient(90deg,#4f3596,#7a5cc4);"></div>
+                <div style="position:absolute;left:54%;top:50%;width:18px;height:18px;border-radius:9999px;background:#fff;transform:translate(-50%,-50%);box-shadow:0 1px 4px rgba(79,53,150,.4);border:1px solid #d7cfe6;"></div>
+              </div>
+              <button style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:9999px;background:#f3eeff;border:1px solid #d7cfe6;color:#4b4364;font:600 14px/1 'DM Sans';cursor:pointer;white-space:nowrap;">Lounge +2<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg></button>
+              <button style="display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:9999px;background:#0066FF;border:none;color:#fff;font:600 14px/1 'DM Sans';cursor:pointer;white-space:nowrap;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>Master volume</button>
+            </div>
+          </div>
+
+          <!-- PLAYLISTS PANEL -->
+          <div style="flex:none;width:386px;display:flex;flex-direction:column;gap:16px;padding:24px;border-radius:20px;background:#fff;border:1px solid #e2dcef;box-shadow:0 12px 28px rgba(79,53,150,.14);">
+            <span style="font:700 11px/1.2 'DM Sans';letter-spacing:.16em;text-transform:uppercase;color:#6b5b86;">Audiobook</span>
+            <button style="display:flex;align-items:center;gap:14px;padding:16px;border-radius:16px;border:1px solid #b6cdff;background:#eaf2ff;color:#1D365F;cursor:pointer;text-align:left;">
+              <span style="display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:#0066FF;color:#fff;flex:none;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg></span>
+              <span style="min-width:0;"><span style="display:block;font:700 16px/1.2 'DM Sans';">Play current audiobook</span><span style="display:block;font:400 13px/1.3 'DM Sans';color:#4b5563;margin-top:3px;">The Salt Path · 4h 12m left</span></span>
+            </button>
+
+            <span style="font:700 11px/1.2 'DM Sans';letter-spacing:.16em;text-transform:uppercase;color:#6b5b86;margin-top:4px;">Apple Music playlists</span>
+            <div style="flex:1;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div style="display:flex;flex-direction:column;background:#faf8fe;border:1px solid #ece6f6;border-radius:14px;overflow:hidden;"><div style="flex:1;background:linear-gradient(150deg,#1bb6c7,#0c5f72);min-height:64px;"></div><div style="padding:11px 13px;"><span style="display:block;font:600 14px/1.15 'DM Sans';color:#2f2160;">Coastal Mornings</span><span style="display:block;font:400 12px/1.2 'DM Sans';color:#9a92ad;margin-top:2px;">48 songs</span></div></div>
+              <div style="display:flex;flex-direction:column;background:#faf8fe;border:1px solid #ece6f6;border-radius:14px;overflow:hidden;"><div style="flex:1;background:linear-gradient(150deg,#5a3fa6,#2f2170);min-height:64px;"></div><div style="padding:11px 13px;"><span style="display:block;font:600 14px/1.15 'DM Sans';color:#2f2160;">Deep Focus</span><span style="display:block;font:400 12px/1.2 'DM Sans';color:#9a92ad;margin-top:2px;">120 songs</span></div></div>
+              <div style="display:flex;flex-direction:column;background:#faf8fe;border:1px solid #ece6f6;border-radius:14px;overflow:hidden;"><div style="flex:1;background:linear-gradient(150deg,#e8913a,#a8451f);min-height:64px;"></div><div style="padding:11px 13px;"><span style="display:block;font:600 14px/1.15 'DM Sans';color:#2f2160;">Sunday Kitchen</span><span style="display:block;font:400 12px/1.2 'DM Sans';color:#9a92ad;margin-top:2px;">64 songs</span></div></div>
+              <div style="display:flex;flex-direction:column;background:#faf8fe;border:1px solid #ece6f6;border-radius:14px;overflow:hidden;"><div style="flex:1;background:linear-gradient(150deg,#2f5fae,#15336b);min-height:64px;"></div><div style="padding:11px 13px;"><span style="display:block;font:600 14px/1.15 'DM Sans';color:#2f2160;">Evening Wind-down</span><span style="display:block;font:400 12px/1.2 'DM Sans';color:#9a92ad;margin-top:2px;">37 songs</span></div></div>
+              <div style="display:flex;flex-direction:column;background:#faf8fe;border:1px solid #ece6f6;border-radius:14px;overflow:hidden;"><div style="flex:1;background:linear-gradient(150deg,#c0395f,#7a1f3a);min-height:64px;"></div><div style="padding:11px 13px;"><span style="display:block;font:600 14px/1.15 'DM Sans';color:#2f2160;">Workshop Energy</span><span style="display:block;font:400 12px/1.2 'DM Sans';color:#9a92ad;margin-top:2px;">82 songs</span></div></div>
+              <div style="display:flex;flex-direction:column;background:#faf8fe;border:1px solid #ece6f6;border-radius:14px;overflow:hidden;"><div style="flex:1;background:linear-gradient(150deg,#3f7d6b,#1f4a3d);min-height:64px;"></div><div style="padding:11px 13px;"><span style="display:block;font:600 14px/1.15 'DM Sans';color:#2f2160;">Rainy Day Jazz</span><span style="display:block;font:400 12px/1.2 'DM Sans';color:#9a92ad;margin-top:2px;">55 songs</span></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
