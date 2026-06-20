@@ -51,7 +51,9 @@ Playback is helper-free and generic (nothing here is hard-wired to Apple Music /
 - **Playlists** (`playlists:`) → tiles play via `music_assistant.play_media` on the focused group's
   coordinator `mass_<room>`. Either list explicit `items`, or give a `source` (an MA browse id, e.g.
   a provider's playlists node) and the card **auto-populates** the tiles by browsing it (`hass.callWS`
-  `media_player/browse_media`). The section heading is configurable.
+  `media_player/browse_media`). If the `source` returns nothing it **falls back to discovering** a
+  "Playlists" folder from the player's root, logs the browse structure to the console, and shows an
+  on-card message instead of a blank grid (no more silent empties). The section heading is configurable.
 - **Action buttons** (`actions:`) → a generic list of buttons, each calling a configured `service`.
   For `script.*` services the card injects `target_player` (coordinator's `mass_<room>`) and
   `target_room`; other services receive exactly their configured `data`. Icons are built-in glyph

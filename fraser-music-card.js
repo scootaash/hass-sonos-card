@@ -1,7 +1,7 @@
 /* TVHGC multi-room music player card (Immersive) for Home Assistant.
    Live native Sonos grouping (group_members + join/unjoin), helper-free. */
 const TEAL = "linear-gradient(155deg,#0c4a5a 0%,#0a3140 52%,#06222e 100%)";
-const VERSION = "0.2.1";
+const VERSION = "0.2.2";
 const ICON = {
   prev: '<polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line>',
   next: '<polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line>',
@@ -58,12 +58,14 @@ class TvhgcMusicCard extends HTMLElement {
     }));
     // Playlists — single section; either explicit `items` or auto-browse a `source`.
     const plCfg = Array.isArray(config.playlists) ? { items: config.playlists } : (config.playlists || {});
+    this._playlistsConfigured = config.playlists != null;
     this._playlistsTitle = plCfg.title || "Playlists";
     this._playlistSource = plCfg.source || null;
     this._playlistSourceType = plCfg.source_type || "playlist";
     this._playlistBrowseEntity = plCfg.browse_entity || null;
     this._playlistItems = (plCfg.items || []).map((p) => ({ name: p.name, media_id: p.media_id, media_type: p.media_type || "playlist", image: p.image || null }));
     this._playlists = this._playlistItems.slice();
+    this._playlistMsg = (this._playlistsConfigured && !this._playlistItems.length) ? "Loading playlists…" : null;
     this._browsed = false;
     this._focusKey = "fmc-focus:" + this._rooms[0].entity;
     this._cfgDefaultFocus = config.default_room || null;
@@ -325,7 +327,7 @@ class TvhgcMusicCard extends HTMLElement {
     </div>
     <div class="panel">
       ${this._actions.length ? `<span class="ovl">${esc(this._actionsTitle)}</span><div class="actions">${actionBtns}</div>` : ""}
-      ${(this._playlistItems.length || this._playlistSource) ? `<span class="ovl"${this._actions.length ? ' style="margin-top:4px"' : ""}>${esc(this._playlistsTitle)}</span><div class="grid"></div>` : ""}
+      ${this._playlistsConfigured ? `<span class="ovl"${this._actions.length ? ' style="margin-top:4px"' : ""}>${esc(this._playlistsTitle)}</span><div class="grid"></div>` : ""}
     </div>
   </div>
 </div>`;
@@ -429,6 +431,11 @@ class TvhgcMusicCard extends HTMLElement {
   }
   _renderTiles() {
     if (!this.$ || !this.$.grid) return;
+    if (!this._playlists.length) {
+      this.$.grid.innerHTML = this._playlistMsg ? `<div style="grid-column:1/-1;align-self:start;font:500 13px/1.45 'DM Sans';color:rgba(255,255,255,.6)">${esc(this._playlistMsg)}</div>` : "";
+      this.$.tiles = [];
+      return;
+    }
     this.$.grid.innerHTML = this._tilesHtml();
     this.$.tiles = [...this.$.grid.querySelectorAll(".tile")];
     this.$.tiles.forEach((el) => el.addEventListener("click", () => this._playPlaylist(+el.dataset.pl)));
@@ -436,18 +443,41 @@ class TvhgcMusicCard extends HTMLElement {
   _browseTarget() {
     return this._playlistBrowseEntity || (this._rooms.find((r) => r.massEntity) || {}).massEntity || null;
   }
-  // Auto-populate tiles by browsing a Music Assistant source (when no explicit items).
+  _log(...a) { try { console.info("fraser-music-card:", ...a); } catch (e) {} }
+  _toItem(c) { return { name: c.title, media_id: c.media_content_id, media_type: c.media_content_type || "playlist", image: c.thumbnail || null }; }
+  _browseChildren(entity_id, id, type) {
+    const msg = { type: "media_player/browse_media", entity_id };
+    if (id != null) { msg.media_content_id = id; msg.media_content_type = type || ""; }
+    return this._hass.callWS(msg).then((res) => (res && res.children) || []);
+  }
+  // Auto-populate tiles: try the configured source, then discover a "Playlists"
+  // folder from the player's root. Logs structure + shows a message on failure.
   async _browsePlaylists() {
-    if (this._browsed || this._playlistItems.length || !this._playlistSource) return;
+    if (this._browsed || this._playlistItems.length || !this._playlistsConfigured) return;
     const ent = this._browseTarget();
     if (!ent || !this._hass || typeof this._hass.callWS !== "function") return;
     this._browsed = true;
     try {
-      const res = await this._hass.callWS({ type: "media_player/browse_media", entity_id: ent, media_content_id: this._playlistSource, media_content_type: this._playlistSourceType });
-      const items = ((res && res.children) || []).filter((c) => c.can_play || c.can_expand)
-        .map((c) => ({ name: c.title, media_id: c.media_content_id, media_type: c.media_content_type || "playlist", image: c.thumbnail || null }));
-      if (items.length) { this._playlists = items; this._renderTiles(); }
-    } catch (e) { /* leave tiles empty; user can supply explicit items */ }
+      let children = [];
+      if (this._playlistSource) {
+        try { children = await this._browseChildren(ent, this._playlistSource, this._playlistSourceType); } catch (e) { this._log("source browse failed:", e && e.message ? e.message : e); }
+        this._log(`source ${this._playlistSource} → ${children.length} children`);
+      }
+      if (!children.length) {
+        const root = await this._browseChildren(ent, null, null);
+        this._log("root nodes:", root.map((c) => `${c.title} [${c.media_content_id} :: ${c.media_content_type}]`));
+        const folder = root.find((c) => /playlist/i.test(`${c.title || ""} ${c.media_content_id || ""}`));
+        if (folder) { children = await this._browseChildren(ent, folder.media_content_id, folder.media_content_type); this._log(`discovered ${folder.media_content_id} → ${children.length} children`); }
+      }
+      const items = children.filter((c) => c.can_play || c.can_expand).map((c) => this._toItem(c));
+      if (items.length) { this._playlists = items; this._playlistMsg = null; }
+      else this._playlistMsg = `No playlists found${this._playlistSource ? ` at ${this._playlistSource}` : ""}. Open HA → Media on ${ent} to find the id (details in the browser console).`;
+      this._renderTiles();
+    } catch (e) {
+      console.warn("fraser-music-card: playlist browse failed —", e && e.message ? e.message : e);
+      this._playlistMsg = "Couldn't load playlists: " + (e && e.message ? e.message : e);
+      this._renderTiles();
+    }
   }
   _playPlaylist(i) {
     const p = this._playlists[i]; if (!p) return;
