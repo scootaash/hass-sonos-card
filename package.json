@@ -1,6 +1,6 @@
 {
   "name": "fraser-music-card",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Immersive multi-room music player Lovelace card for Home Assistant (Sonos + Music Assistant)",
   "scripts": {
     "test": "node test/smoke-test.js fraser-music-card.js",
