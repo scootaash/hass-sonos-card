@@ -2,9 +2,10 @@
 
 An immersive multi-room music player **custom Lovelace card** for Home Assistant, built for a
 Sonos + Music Assistant household and a wall-mounted tablet (1280×800), responsive down to
-phones. Album-art colour wash, master/speaker selector, live speaker grouping, custom volume
-sliders with a per-room popover, Apple Music (via Music Assistant) playlist tiles, and an
-audiobook resume button.
+phones. Album-art colour wash, group selector, live speaker grouping, custom volume sliders
+with a per-room popover, playlist tiles (auto-populated from any Music Assistant source, or
+listed explicitly), and a configurable set of action buttons (scripts/services — e.g. an
+audiobook resume button).
 
 It is a **frontend card only** — no integration / Python component. It reads `hass` state and
 calls existing services (`media_player.*`, `music_assistant.play_media`).
@@ -34,9 +35,10 @@ look on a real device.
 - `NEXT_PROMPT.md` — the current roadmap task (live native grouping + group-aware visuals).
 
 ## Status / roadmap
-Working today; **migrating grouping** off `input_boolean` helpers to live Sonos
-`group_members` + `join`/`unjoin` so it reflects changes made in other apps. See
-`NEXT_PROMPT.md`.
+Grouping is **live and native**: the card reads Sonos `group_members` and acts via
+`media_player.join`/`unjoin`, so groups formed in the Sonos app appear within ~1 s. Top-nav pills
+select which group is focused; the right column adds/removes/relocates speakers. It's helper-free
+(no `input_boolean`/`input_select`) — the focused room is tracked internally and persisted per device.
 
 ## License
 MIT
