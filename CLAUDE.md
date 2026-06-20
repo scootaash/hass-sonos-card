@@ -32,37 +32,45 @@ Each room has **two** entities. Use the right one for the right job:
 | Now-playing / artist / progress | Sonos `media_player.<room>` | Populated when MA streams to the Sonos player. |
 | Album art (for the colour wash) | Sonos `media_player.<room>` → `entity_picture` | It's a same-origin `/api/media_player_proxy/...` URL → canvas-safe. MA art is absolute `http://192.168…:8095` (mixed-content + taints canvas). |
 | Volume read/set | Sonos `media_player.<room>` → `volume_level`, `media_player.volume_set` | Native. |
-| Group add/remove | `media_player.join` / `media_player.unjoin` on the **Sonos** entities | Native Sonos grouping; visible everywhere. |
-| Play a playlist / album / track | `music_assistant.play_media` on the **MA** `media_player.mass_<room>` | MA `library://…` URIs only resolve on MA players. |
-| "Master" room | `input_select.sonos_master` (holds the room *name*) | Shared with the play-scripts below; tidy single helper. |
+| Group add/remove/relocate | `media_player.join` (target = coordinator's Sonos entity, `group_members: [room]`) / `media_player.unjoin` (target = room) | Native Sonos grouping; visible everywhere. `join` relocates a room already in another group. |
+| Play a playlist / album / track | `music_assistant.play_media` on the **MA** `media_player.mass_<coordinator>` | MA `library://…` URIs only resolve on MA players; play to the selected group's coordinator. |
+| Focused group / "master" | **Card-internal** (the last pill tapped), persisted to `localStorage` | Helper-free — no `input_select`. The card derives the *coordinator* of the focused group from live `group_members[0]`. |
 
-Play-scripts (already exist; the card calls these, or MA directly):
-- `script.music_play_on_master(media_id, media_type, enqueue)` — maps `input_select.sonos_master`
-  → `media_player.mass_<room>` and calls `music_assistant.play_media`.
-- `script.resume_audiobook_on_master` → delegates to `script.play_recent_audible_audiobook`.
+Grouping model (live, native — no helpers):
+- **Source of truth** = `group_members` on each Sonos `media_player.<room>`. A room is *solo* when
+  `group_members` ≤ 1 entry, *grouped* when > 1 with `group_members[0]` = the **coordinator**.
+- **Top-nav pills select a group** (focus) — they never join/unjoin. Tapping any speaker re-centres
+  the card on the group it belongs to; the coordinator (hence now-playing / transport / playback
+  target) is whatever Sonos reports, unchanged by the tap.
+- **Right-column rows build the focused group**: add (`join`), remove (`unjoin`), or relocate a room
+  from another group (`join` → "Move from \<coordinator\>"). The coordinator row is a no-op anchor.
+- **"Make \<room\> its own group"** button (top of the group column) `unjoin`s the focused speaker —
+  the only way to split out the coordinator.
 
-Rooms (name → Sonos entity → MA entity → input_select option → default volume %):
-- Lounge `media_player.lounge` `media_player.mass_lounge` "Lounge" 29
-- Kitchen `media_player.kitchen` `media_player.mass_kitchen` "Kitchen" 36
-- Master Bedroom `media_player.master_bedroom` `media_player.mass_master_bedroom` "Master Bedroom" 42
-- Garage `media_player.garage` `media_player.mass_garage` "Garage" 25
-- Spare Room `media_player.spare_room` `media_player.mass_spare_room` "Spare Room" 34
-- Hall `media_player.hallway` `media_player.mass_hall` "Hall" 30  ← note: entity is `hallway`
+Playback is helper-free:
+- Playlists → `music_assistant.play_media` directly on the focused group's coordinator `mass_<room>`.
+- Audiobook → the card still calls the configured `resume_script`, **passing** `target_player`
+  (coordinator's `mass_<room>`) and `target_room` (its name) as service data. The script must read
+  `target_player` instead of an `input_select` (one-line change), e.g.
+  `service: music_assistant.play_media … target: { entity_id: "{{ target_player }}" }`.
 
-> Migration in progress: the original card drove grouping through six
-> `input_boolean.sonos_group_*` helpers. We are **removing those** in favour of live
-> `group_members` + join/unjoin. See `NEXT_PROMPT.md`.
+Rooms (name → Sonos entity → MA entity → default volume %):
+- Lounge `media_player.lounge` `media_player.mass_lounge` 29
+- Kitchen `media_player.kitchen` `media_player.mass_kitchen` 36
+- Master Bedroom `media_player.master_bedroom` `media_player.mass_master_bedroom` 42
+- Garage `media_player.garage` `media_player.mass_garage` 25
+- Spare Room `media_player.spare_room` `media_player.mass_spare_room` 34
+- Hall `media_player.hallway` `media_player.mass_hall` 30  ← note: entity is `hallway`
 
 ## Config (YAML) the card accepts
 ```yaml
 type: custom:fraser-music-card
-master_entity: input_select.sonos_master
-play_script: script.music_play_on_master           # or omit to call music_assistant.play_media directly
+default_room: media_player.lounge          # optional: which group is focused on first load (localStorage wins after)
 audiobook:
-  resume_script: script.resume_audiobook_on_master
+  resume_script: script.resume_audiobook_on_master   # called with target_player + target_room data
 rooms:
-  - { name: Lounge, entity: media_player.lounge, mass_entity: media_player.mass_lounge, master_option: Lounge, default_volume: 29 }
-  # …one per room
+  - { name: Lounge, entity: media_player.lounge, mass_entity: media_player.mass_lounge, default_volume: 29 }
+  # …one per room (mass_entity is required for playlist/audiobook playback)
 playlists:
   - { name: Chill, media_id: library://playlist/13, media_type: playlist }
   - { name: Favourite Songs, media_id: library://playlist/17, media_type: playlist, image: <art-url> }

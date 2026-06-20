@@ -1,11 +1,13 @@
 /* TVHGC multi-room music player card (Immersive) for Home Assistant.
-   Integrates with the existing Sonos master/group helpers + play scripts. */
+   Live native Sonos grouping (group_members + join/unjoin), helper-free. */
 const TEAL = "linear-gradient(155deg,#0c4a5a 0%,#0a3140 52%,#06222e 100%)";
 const ICON = {
   prev: '<polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line>',
   next: '<polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line>',
   check: '<polyline points="20 6 9 17 4 12"></polyline>',
   plus: '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>',
+  move: '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line>',
+  split: '<polyline points="15 14 20 9 15 4"></polyline><path d="M4 20v-7a4 4 0 0 1 4-4h12"></path>',
   reset: '<path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.4 2.6L3 8"></path><path d="M3 3v5h5"></path>',
   vol: '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>',
   chev: '<polyline points="6 9 12 15 18 9"></polyline>',
@@ -25,19 +27,20 @@ class TvhgcMusicCard extends HTMLElement {
     if (!config || !Array.isArray(config.rooms) || !config.rooms.length)
       throw new Error("fraser-music-card: `rooms` is required");
     this._cfg = config;
-    this._masterEntity = config.master_entity;
-    this._playScript = config.play_script || "script.music_play_on_master";
     const ab = config.audiobook || {};
     this._abResume = ab.resume_script || "script.resume_audiobook_on_master";
     this._abSource = ab.source_entity || null;
     this._rooms = config.rooms.map((r) => ({
       name: r.name || r.entity,
       entity: r.entity,
-      groupBool: r.group_boolean || null,
-      masterOption: r.master_option || r.name,
+      massEntity: r.mass_entity || null,
       def: r.default_volume != null ? r.default_volume : 40,
     }));
     this._playlists = config.playlists || [];
+    this._focusKey = "fmc-focus:" + this._rooms[0].entity;
+    this._cfgDefaultFocus = config.default_room || null;
+    this._focusEntity = null;
+    this._localGroup = {};
     this._drag = null;
     this._localVol = {};
     this._localVolAt = {};
@@ -66,18 +69,54 @@ class TvhgcMusicCard extends HTMLElement {
   }
 
   _st(id) { return this._hass && this._hass.states[id]; }
-  _masterName() {
-    const s = this._masterEntity && this._st(this._masterEntity);
-    return s ? s.state : (this._cfg.master_name || this._rooms[0].masterOption);
+  _roomByEntity(eid) { return this._rooms.find((r) => r.entity === eid); }
+  _friendly(eid) { const st = this._st(eid); return (st && st.attributes && st.attributes.friendly_name) || eid; }
+  // Live Sonos topology: each room's group_members (>=1, with [0] = coordinator).
+  _groupMembersOf(r) {
+    const s = this._st(r.entity); const gm = s && s.attributes.group_members;
+    return Array.isArray(gm) && gm.length ? gm : [r.entity];
   }
-  _masterRoom() {
-    const n = this._masterName();
-    return this._rooms.find((r) => r.masterOption === n) || this._rooms[0];
+  // Optimistic grouping override (short TTL) so a join/unjoin feels instant but
+  // external Sonos/MA changes still reconcile within a few seconds.
+  _freshOpt(eid) {
+    const o = this._localGroup[eid]; if (!o) return null;
+    if (Date.now() - o.at > 3000) { delete this._localGroup[eid]; return null; }
+    return o;
   }
-  _grouped() {
-    const m = this._masterRoom();
-    return this._rooms.filter((r) => r === m || (r.groupBool && this._st(r.groupBool) && this._st(r.groupBool).state === "on"));
+  _optGroup(eid, inb) { this._localGroup[eid] = { in: inb, at: Date.now() }; }
+  // The "focused" room = the pill the user last selected (defaults to a playing
+  // room). Selecting a pill never joins/unjoins — it just re-centres the card.
+  _focusRoom() { return this._rooms.find((r) => r.entity === this._focusEntity) || this._rooms[0]; }
+  // Effective membership of the selected group (focus's group + optimistic edits).
+  _effMembers() {
+    const focus = this._focusRoom();
+    const fo = this._freshOpt(focus.entity);
+    if (fo && fo.in === false) return new Set([focus.entity]); // optimistic split → solo
+    const set = new Set(this._groupMembersOf(focus)); set.add(focus.entity);
+    for (const r of this._rooms) {
+      const o = this._freshOpt(r.entity);
+      if (o) { if (o.in) set.add(r.entity); else if (r.entity !== focus.entity) set.delete(r.entity); }
+    }
+    set.add(focus.entity);
+    return set;
   }
+  // Real Sonos coordinator of the selected group (drives now-playing / playback).
+  _coordEntity() {
+    const focus = this._focusRoom();
+    const fo = this._freshOpt(focus.entity);
+    if (fo && fo.in === false) return focus.entity;
+    const gm = this._groupMembersOf(focus); const m = this._effMembers();
+    return m.has(gm[0]) ? gm[0] : focus.entity;
+  }
+  _coordRoom() { return this._roomByEntity(this._coordEntity()) || this._focusRoom(); }
+  _grouped() { const m = this._effMembers(); return this._rooms.filter((r) => m.has(r.entity)); }
+  _loadFocus() { try { const v = localStorage.getItem(this._focusKey); return (v && this._rooms.some((r) => r.entity === v)) ? v : null; } catch (e) { return null; } }
+  _defaultFocus() {
+    if (this._cfgDefaultFocus && this._rooms.some((r) => r.entity === this._cfgDefaultFocus)) return this._cfgDefaultFocus;
+    const p = this._rooms.find((r) => { const s = this._st(r.entity); return s && s.state === "playing"; });
+    return (p || this._rooms[0]).entity;
+  }
+  _persistFocus() { try { localStorage.setItem(this._focusKey, this._focusEntity); } catch (e) {} }
   _vol(r) {
     if (this._localVol[r.entity] != null) return this._localVol[r.entity];
     const s = this._st(r.entity);
@@ -112,12 +151,14 @@ class TvhgcMusicCard extends HTMLElement {
 .ovl{font:700 11px/1.2 'DM Sans';letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.55);}
 .col{display:flex;flex-direction:column;gap:10px;}
 .pillrow{display:flex;gap:10px;flex-wrap:wrap;}
-.pill{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:99px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.07);color:rgba(255,255,255,.78);font:500 14px/1 'DM Sans';cursor:pointer;}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:99px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.07);color:rgba(255,255,255,.78);font:500 14px/1 'DM Sans';cursor:pointer;transition:opacity .2s;}
 .pill .dot{width:7px;height:7px;border-radius:99px;background:rgba(255,255,255,.3);}
-.pill.grp{background:rgba(0,204,204,.12);border-color:rgba(0,204,204,.45);color:rgba(255,255,255,.92);}
-.pill.grp .dot{background:#00CCCC;}
-.pill.master{color:#fff;box-shadow:inset 0 0 0 2px #18b2c4;}
-.pill.master .dot{background:#eafdff;box-shadow:0 0 0 3px rgba(24,178,196,.55);}
+.pill.sel{background:rgba(0,204,204,.12);border-color:rgba(0,204,204,.45);color:rgba(255,255,255,.92);}
+.pill.sel .dot{background:#00CCCC;}
+.pill.dim{opacity:.45;background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.1);color:rgba(255,255,255,.6);}
+.pill.dim .dot{background:rgba(0,204,204,.5);}
+.pill.focus{color:#fff;opacity:1;box-shadow:inset 0 0 0 2px #18b2c4;}
+.pill.focus .dot{background:#eafdff;box-shadow:0 0 0 3px rgba(24,178,196,.55);}
 .player{flex:1;display:flex;gap:22px;min-height:0;}
 .art{position:relative;flex:none;width:498px;height:498px;border-radius:20px;overflow:hidden;background:linear-gradient(150deg,#1bb6c7,#0c5f72 48%,#07303f);}
 .cover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
@@ -139,6 +180,9 @@ class TvhgcMusicCard extends HTMLElement {
 .tr button{display:inline-flex;align-items:center;justify-content:center;border:none;background:transparent;color:rgba(255,255,255,.9);cursor:pointer;width:48px;height:48px;}
 .tr .pp{width:74px;height:74px;border-radius:99px;background:#fff;color:#07303f;}
 .gcol{flex:1;display:flex;flex-direction:column;gap:10px;min-width:0;}
+.gchead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.splitbtn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:rgba(255,255,255,.85);font:600 11px/1.1 'DM Sans';cursor:pointer;}
+.splitbtn:hover{background:rgba(255,255,255,.14);}
 .glist{flex:1;display:flex;flex-direction:column;gap:9px;}
 .grow{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);cursor:pointer;}
 .gtext{display:flex;flex-direction:column;gap:2px;min-width:0;}
@@ -146,9 +190,11 @@ class TvhgcMusicCard extends HTMLElement {
 .gs{font:500 11px/1 'DM Sans';letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;color:rgba(255,255,255,.45);}
 .grow.grp{background:rgba(0,204,204,.1);border-color:rgba(0,204,204,.4);} .grow.grp .gs{color:#7fe9ef;}
 .grow.master{border-color:rgba(24,178,196,.5);} .grow.master .gs{color:#7fe9ef;}
+.grow.other{background:rgba(232,145,58,.12);border-color:rgba(232,145,58,.5);} .grow.other .gs{color:#f3c18a;}
 .gtog{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:none;border-radius:99px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);cursor:pointer;flex:none;}
 .grow.grp .gtog,.grow.master .gtog{background:#00CCCC;color:#06303d;}
 .grow.master .gtog{background:#18b2c4;}
+.grow.other .gtog{background:#e8913a;color:#3a1e06;}
 .volrow{position:relative;display:flex;align-items:center;gap:16px;padding:16px 20px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);}
 .slider{position:relative;height:20px;display:flex;align-items:center;cursor:pointer;touch-action:none;flex:1;}
 .slider .strack{position:relative;width:100%;height:6px;border-radius:99px;background:rgba(255,255,255,.2);}
@@ -188,7 +234,7 @@ class TvhgcMusicCard extends HTMLElement {
   <div class="wash"></div><div class="blob b1"></div><div class="blob b2"></div>
   <div class="wrap">
     <div class="left">
-      <div class="col"><span class="ovl">Speakers — tap to set master</span><div class="pillrow">${pills}</div></div>
+      <div class="col"><span class="ovl">Speakers — tap to select group</span><div class="pillrow">${pills}</div></div>
       <div class="player">
         <div class="art">
           <img class="cover" alt="" style="display:none">
@@ -205,7 +251,7 @@ class TvhgcMusicCard extends HTMLElement {
             </div>
           </div>
         </div>
-        <div class="gcol"><span class="ovl">Tap to add to group</span><div class="glist">${grows}</div></div>
+        <div class="gcol"><div class="gchead"><span class="ovl">Tap to add to group</span><button class="splitbtn" style="display:none"></button></div><div class="glist">${grows}</div></div>
       </div>
       <div class="volrow">
         <span class="vic">${svg(ICON.vol, 20)}</span>
@@ -240,6 +286,7 @@ class TvhgcMusicCard extends HTMLElement {
       barF: $(".bar .f"), barK: $(".bar .k"), bar: $(".bar"),
       prev: $(".prev"), pp: $(".pp"), next: $(".next"),
       pills: [...root.querySelectorAll(".pill")], grows: [...root.querySelectorAll(".grow")],
+      splitbtn: $(".splitbtn"),
       mFill: $(".slider.master .sfill"), mKnob: $(".slider.master .sknob"),
       drop: $(".drop"), dlabel: $(".dlabel"), pop: $(".pop"), popcnt: $(".popcnt"),
       allpct: $(".allpct"), mvol: $(".mvol"),
@@ -249,11 +296,12 @@ class TvhgcMusicCard extends HTMLElement {
     };
 
     // events
-    this.$.pills.forEach((el) => el.addEventListener("click", () => this._setMaster(+el.dataset.room)));
+    this.$.pills.forEach((el) => el.addEventListener("click", () => this._selectGroup(+el.dataset.room)));
     this.$.grows.forEach((el) => el.addEventListener("click", () => this._toggleGroup(+el.dataset.room)));
+    this.$.splitbtn.addEventListener("click", () => this._splitFocus());
     this.$.prev.addEventListener("click", () => this._prev());
     this.$.next.addEventListener("click", () => this._next());
-    this.$.pp.addEventListener("click", () => this._svc("media_player", "media_play_pause", { entity_id: this._masterRoom().entity }));
+    this.$.pp.addEventListener("click", () => this._svc("media_player", "media_play_pause", { entity_id: this._coordRoom().entity }));
     this.$.bar.addEventListener("pointerdown", (e) => this._seekDrag(e));
     this.$.masterSliders.forEach((el) => el.addEventListener("pointerdown", (e) => this._volDrag(e, "master")));
     this.$.prows.forEach((el) => {
@@ -264,7 +312,7 @@ class TvhgcMusicCard extends HTMLElement {
     this.$.mvol.addEventListener("click", () => this._syncMaster());
     $(".popset").addEventListener("click", () => this._syncMaster());
     this.$.tiles.forEach((el) => el.addEventListener("click", () => this._playPlaylist(+el.dataset.pl)));
-    this.$.abbtn.addEventListener("click", () => this._svc("script", this._abResume.replace(/^script\./, ""), {}));
+    this.$.abbtn.addEventListener("click", () => { const c = this._coordRoom(); this._svc("script", this._abResume.replace(/^script\./, ""), { target_player: c.massEntity, target_room: c.name }); });
     this._onDoc = (e) => { if (this._open && !e.composedPath().includes(this.$.pop) && e.composedPath().indexOf(this.$.drop) < 0) { this._open = false; this._update(); } };
     document.addEventListener("click", this._onDoc);
     this._resize();
@@ -279,21 +327,38 @@ class TvhgcMusicCard extends HTMLElement {
   }
 
   _svc(d, s, data) { if (this._hass) this._hass.callService(d, s, data); }
-  _setMaster(i) {
-    const r = this._rooms[i];
-    if (this._masterEntity) this._svc("input_select", "select_option", { entity_id: this._masterEntity, option: r.masterOption });
+  // Top-nav pill: focus the group this speaker belongs to. Never joins/unjoins.
+  _selectGroup(i) {
+    const r = this._rooms[i]; if (!r) return;
+    this._focusEntity = r.entity; this._persistFocus(); this._update();
   }
+  // Group row: add (join), remove (unjoin), or relocate (join from another group).
   _toggleGroup(i) {
-    const r = this._rooms[i];
-    if (r === this._masterRoom() || !r.groupBool) return;
-    this._svc("input_boolean", "toggle", { entity_id: r.groupBool });
+    const r = this._rooms[i]; if (!r) return;
+    if (r.entity === this._coordEntity()) return; // coordinator anchor — split via the header button
+    if (this._effMembers().has(r.entity)) {
+      this._optGroup(r.entity, false);
+      this._svc("media_player", "unjoin", { entity_id: r.entity });
+    } else {
+      this._optGroup(r.entity, true);
+      this._svc("media_player", "join", { entity_id: this._coordRoom().entity, group_members: [r.entity] });
+    }
+    this._update();
   }
-  _prev() { this._svc("media_player", "media_previous_track", { entity_id: this._masterRoom().entity }); }
-  _next() { this._svc("media_player", "media_next_track", { entity_id: this._masterRoom().entity }); }
+  // Header button: pull the focused speaker out so it becomes its own group.
+  _splitFocus() {
+    const f = this._focusRoom(); if (this._effMembers().size <= 1) return;
+    this._optGroup(f.entity, false);
+    this._svc("media_player", "unjoin", { entity_id: f.entity });
+    this._update();
+  }
+  _prev() { this._svc("media_player", "media_previous_track", { entity_id: this._coordRoom().entity }); }
+  _next() { this._svc("media_player", "media_next_track", { entity_id: this._coordRoom().entity }); }
   _isBook(s) { return s && ["audiobook", "podcast"].includes(s.attributes.media_content_type); }
   _playPlaylist(i) {
     const p = this._playlists[i]; if (!p) return;
-    this._svc("script", this._playScript.replace(/^script\./, ""), { media_id: p.media_id, media_type: p.media_type || "playlist" });
+    const mass = this._coordRoom().massEntity; if (!mass) return;
+    this._svc("music_assistant", "play_media", { entity_id: mass, media_id: p.media_id, media_type: p.media_type || "playlist" });
   }
   _livePos(s) {
     if (!s) return 0;
@@ -304,7 +369,7 @@ class TvhgcMusicCard extends HTMLElement {
   }
 
   _seekDrag(e) {
-    const m = this._masterRoom(); const s = this._st(m.entity); const dur = s && s.attributes.media_duration;
+    const m = this._coordRoom(); const s = this._st(m.entity); const dur = s && s.attributes.media_duration;
     if (!dur) return;
     const track = this.$.bar; const rect = track.getBoundingClientRect();
     const apply = (x, fire) => {
@@ -354,6 +419,7 @@ class TvhgcMusicCard extends HTMLElement {
 
   _update() {
     if (!this._hass || !this.$) return;
+    if (!this._focusEntity) this._focusEntity = this._loadFocus() || this._defaultFocus();
     if (!this._drag) {
       const now = Date.now();
       for (const e in this._localVol) {
@@ -361,29 +427,42 @@ class TvhgcMusicCard extends HTMLElement {
         if ((real != null && Math.abs(real - this._localVol[e]) <= 2) || now - (this._localVolAt[e] || 0) > 3000) { delete this._localVol[e]; delete this._localVolAt[e]; }
       }
     }
-    const m = this._masterRoom(); const s = this._st(m.entity); const a = (s && s.attributes) || {};
-    const grouped = this._grouped(); const gset = new Set(grouped.map((r) => r));
+    const members = this._effMembers(); const coordE = this._coordEntity(); const focusE = this._focusRoom().entity;
+    const m = this._coordRoom(); const s = this._st(m.entity); const a = (s && s.attributes) || {};
+    const grouped = this._grouped();
     // wash from art
     const pic = a.entity_picture || null;
     this._applyWash(pic);
     // cover
     if (pic) { if (this.$.cover.getAttribute("src") !== pic) this.$.cover.src = pic; this.$.cover.style.display = ""; }
     else this.$.cover.style.display = "none";
-    // pills
+    // pills — focus = ring, selected group = turquoise, grouped elsewhere = dimmed
     this._rooms.forEach((r, i) => {
-      const el = this.$.pills[i]; el.classList.toggle("master", r === m);
-      el.classList.toggle("grp", r !== m && gset.has(r));
+      const el = this.$.pills[i]; const inSel = members.has(r.entity);
+      const elsewhere = !inSel && this._groupMembersOf(r).length > 1;
+      el.classList.toggle("sel", inSel && members.size > 1);
+      el.classList.toggle("focus", r.entity === focusE);
+      el.classList.toggle("dim", elsewhere);
     });
-    // group rows
+    // group rows — coordinator anchor / in group / in another group / available
     const playing = s && s.state === "playing";
     this._rooms.forEach((r, i) => {
-      const el = this.$.grows[i]; const isM = r === m; const inG = gset.has(r) && !isM;
-      el.classList.toggle("master", isM); el.classList.toggle("grp", inG);
-      el.style.background = isM && this._pillColor ? this._pillColor : "";
+      const el = this.$.grows[i]; const inSel = members.has(r.entity); const isCoord = r.entity === coordE;
+      const elsewhere = !inSel && this._groupMembersOf(r).length > 1;
+      el.classList.toggle("master", isCoord);
+      el.classList.toggle("grp", inSel && !isCoord);
+      el.classList.toggle("other", elsewhere);
+      el.style.background = isCoord && this._pillColor ? this._pillColor : "";
       const sub = el.querySelector(".gs"); const tog = el.querySelector(".gtog");
-      sub.textContent = isM ? (playing ? "Master · playing" : "Master") : inG ? "In group" : "Available";
-      tog.innerHTML = (isM || inG) ? svg(ICON.check, 18, 3) : svg(ICON.plus, 18, 2.4);
+      if (isCoord) { sub.textContent = playing ? "Master · playing" : "Master"; tog.innerHTML = svg(ICON.check, 18, 3); }
+      else if (inSel) { sub.textContent = "In group"; tog.innerHTML = svg(ICON.check, 18, 3); }
+      else if (elsewhere) { const c = this._roomByEntity(this._groupMembersOf(r)[0]); sub.textContent = "Move from " + (c ? c.name : this._friendly(this._groupMembersOf(r)[0])); tog.innerHTML = svg(ICON.move, 18, 2.2); }
+      else { sub.textContent = "Available"; tog.innerHTML = svg(ICON.plus, 18, 2.4); }
     });
+    // split button — make the focused speaker its own group (when it's grouped)
+    const canSplit = members.size > 1;
+    this.$.splitbtn.style.display = canSplit ? "" : "none";
+    if (canSplit) this.$.splitbtn.innerHTML = svg(ICON.split, 14, 2.2) + "<span>Make " + esc(this._focusRoom().name) + " its own group</span>";
     // now playing
     const book = this._isBook(s);
     this.$.t1.textContent = a.media_title || (s ? (s.state === "idle" ? "Nothing playing" : m.name) : "No data");
@@ -410,7 +489,7 @@ class TvhgcMusicCard extends HTMLElement {
       this.$.allpct.textContent = mv + "%";
       this.$.masterSliders.forEach((sl) => { sl.querySelector(".sfill").style.width = mv + "%"; sl.querySelector(".sknob").style.left = mv + "%"; });
       this._rooms.forEach((r, i) => {
-        const row = this.$.prows[i]; const show = gset.has(r); row.style.display = show ? "" : "none";
+        const row = this.$.prows[i]; const show = members.has(r.entity); row.style.display = show ? "" : "none";
         if (!show) return;
         const v = this._vol(r);
         row.querySelector(".prpct").textContent = v + "%";

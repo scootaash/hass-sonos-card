@@ -34,9 +34,10 @@ look on a real device.
 - `NEXT_PROMPT.md` — the current roadmap task (live native grouping + group-aware visuals).
 
 ## Status / roadmap
-Working today; **migrating grouping** off `input_boolean` helpers to live Sonos
-`group_members` + `join`/`unjoin` so it reflects changes made in other apps. See
-`NEXT_PROMPT.md`.
+Grouping is **live and native**: the card reads Sonos `group_members` and acts via
+`media_player.join`/`unjoin`, so groups formed in the Sonos app appear within ~1 s. Top-nav pills
+select which group is focused; the right column adds/removes/relocates speakers. It's helper-free
+(no `input_boolean`/`input_select`) — the focused room is tracked internally and persisted per device.
 
 ## License
 MIT
