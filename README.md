@@ -11,11 +11,20 @@ It is a **frontend card only** — no integration / Python component. It reads `
 calls existing services (`media_player.*`, `music_assistant.play_media`).
 
 ## Install
+
+### Via HACS (recommended)
+1. HACS → ⋮ → **Custom repositories** → add `scootaash/hass-sonos-card`, category **Dashboard**.
+2. Install **Fraser Music Card** from HACS (it downloads the JS and registers the resource).
+3. Add the card to a dashboard (step 3 below). Hard-refresh after updates.
+
+### Manual
 1. Copy `fraser-music-card.js` into your HA `/config/www/` folder.
 2. Add a dashboard resource: **Settings → Dashboards → ⋮ → Resources → Add**
    - URL: `/local/fraser-music-card.js`
    - Type: **JavaScript Module**
-3. (For the exact font) add a second resource, type **Stylesheet**:
+
+### Then (either method)
+3. (For the exact font) add a resource, type **Stylesheet**:
    `https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap`
 4. Add the card to a dashboard — a full-width `panel` view is ideal. Example config and the
    entity model are in [`CLAUDE.md`](CLAUDE.md).
