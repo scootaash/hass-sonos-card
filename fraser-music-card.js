@@ -1,7 +1,7 @@
 /* TVHGC multi-room music player card (Immersive) for Home Assistant.
    Live native Sonos grouping (group_members + join/unjoin), helper-free. */
 const TEAL = "linear-gradient(155deg,#0c4a5a 0%,#0a3140 52%,#06222e 100%)";
-const VERSION = "0.2.2";
+const VERSION = "0.3.0";
 const ICON = {
   prev: '<polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line>',
   next: '<polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line>',
@@ -207,12 +207,10 @@ class TvhgcMusicCard extends HTMLElement {
 .pillrow{display:flex;gap:10px;flex-wrap:wrap;}
 .pill{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:99px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.07);color:rgba(255,255,255,.78);font:500 14px/1 'DM Sans';cursor:pointer;transition:opacity .2s;}
 .pill .dot{width:7px;height:7px;border-radius:99px;background:rgba(255,255,255,.3);}
-.pill.sel{background:rgba(0,204,204,.12);border-color:rgba(0,204,204,.45);color:rgba(255,255,255,.92);}
-.pill.sel .dot{background:#00CCCC;}
-.pill.dim{opacity:.45;background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.1);color:rgba(255,255,255,.6);}
-.pill.dim .dot{background:rgba(0,204,204,.5);}
-.pill.focus{color:#fff;opacity:1;box-shadow:inset 0 0 0 2px #18b2c4;}
-.pill.focus .dot{background:#eafdff;box-shadow:0 0 0 3px rgba(24,178,196,.55);}
+.pill.current{background:rgba(0,204,204,.16);border-color:rgba(0,204,204,.55);color:#fff;box-shadow:inset 0 0 0 2px #18b2c4;}
+.pill.current .dot{background:#eafdff;box-shadow:0 0 0 3px rgba(24,178,196,.55);}
+.pill.follower{opacity:.4;background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.1);color:rgba(255,255,255,.6);}
+.pill.follower .dot{background:rgba(255,255,255,.25);}
 .player{flex:1;display:flex;gap:22px;min-height:0;}
 .art{position:relative;flex:none;width:498px;height:498px;border-radius:20px;overflow:hidden;background:linear-gradient(150deg,#1bb6c7,#0c5f72 48%,#07303f);}
 .cover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
@@ -242,12 +240,14 @@ class TvhgcMusicCard extends HTMLElement {
 .gtext{display:flex;flex-direction:column;gap:2px;min-width:0;}
 .gn{font:600 15px/1.2 'DM Sans';color:rgba(255,255,255,.92);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .gs{font:500 11px/1 'DM Sans';letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;color:rgba(255,255,255,.45);}
-.grow.grp{background:rgba(0,204,204,.1);border-color:rgba(0,204,204,.4);} .grow.grp .gs{color:#7fe9ef;}
+.grow.grp{background:rgba(0,204,204,.07);border-color:rgba(0,204,204,.28);} .grow.grp .gs{color:#7fe9ef;}
 .grow.master{border-color:rgba(24,178,196,.5);} .grow.master .gs{color:#7fe9ef;}
-.grow.other{background:rgba(232,145,58,.12);border-color:rgba(232,145,58,.5);} .grow.other .gs{color:#f3c18a;}
+.grow.avail{background:rgba(0,204,204,.15);border-color:rgba(0,204,204,.55);} .grow.avail .gn{color:#fff;} .grow.avail .gs{color:#8ff0f5;}
+.grow.other{background:rgba(232,145,58,.06);border-color:rgba(232,145,58,.38);} .grow.other .gs{color:#f3c18a;}
 .gtog{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:none;border-radius:99px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);cursor:pointer;flex:none;}
-.grow.grp .gtog,.grow.master .gtog{background:#00CCCC;color:#06303d;}
-.grow.master .gtog{background:#18b2c4;}
+.grow.grp .gtog{background:rgba(0,204,204,.55);color:#06303d;}
+.grow.master .gtog{background:#18b2c4;color:#06303d;}
+.grow.avail .gtog{background:#18b2c4;color:#06303d;box-shadow:0 0 0 4px rgba(24,178,196,.22);}
 .grow.other .gtog{background:#e8913a;color:#3a1e06;}
 .volrow{position:relative;display:flex;align-items:center;gap:16px;padding:16px 20px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);}
 .slider{position:relative;height:20px;display:flex;align-items:center;cursor:pointer;touch-action:none;flex:1;}
@@ -256,19 +256,16 @@ class TvhgcMusicCard extends HTMLElement {
 .slider .sknob{position:absolute;top:50%;width:18px;height:18px;border-radius:99px;background:#fff;transform:translate(-50%,-50%);left:0;}
 .btn{display:inline-flex;align-items:center;gap:8px;border-radius:99px;font:600 14px/1 'DM Sans';cursor:pointer;white-space:nowrap;padding:10px 16px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.18);}
 .btn.act{background:#18b2c4;color:#06303d;border-color:transparent;}
-.mvol.act{background:#fff;color:#06303d;border:none;}
+.drop{padding:10px 12px;}
 .pop{position:absolute;bottom:calc(100% + 12px);right:0;width:340px;max-width:calc(100vw - 32px);padding:18px;border-radius:16px;background:#0a2f3c;border:1px solid rgba(255,255,255,.14);z-index:30;}
-.pophead,.prhead,.rowlabel{display:flex;align-items:center;justify-content:space-between;}
+.pophead,.prhead{display:flex;align-items:center;justify-content:space-between;}
 .popcnt{font:600 12px/1 'DM Sans';color:#7fe9ef;}
-.popmaster{display:flex;flex-direction:column;gap:8px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,.12);margin-top:16px;}
 .poprows{display:flex;flex-direction:column;gap:16px;margin-top:16px;}
 .prn{font:600 14px/1 'DM Sans';color:#fff;}
 .prr{display:flex;align-items:center;gap:10px;}
 .prdef{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.82);font:600 11px/1 'DM Sans';cursor:pointer;}
 .prpct{font:700 12px/1 'DM Sans';color:#7fe9ef;min-width:34px;text-align:right;}
 .sm .strack{background:rgba(255,255,255,.15);} .sm .sfill{background:#18b2c4;}
-.rowlabel{display:flex;align-items:center;justify-content:space-between;}
-.popset{margin-top:18px;width:100%;padding:11px;border-radius:10px;border:none;background:#0066FF;color:#fff;font:600 14px/1 'DM Sans';cursor:pointer;}
 .panel{flex:none;width:386px;display:flex;flex-direction:column;gap:16px;padding:24px;border-radius:20px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);}
 .actions{display:flex;flex-direction:column;gap:10px;}
 .abtn{display:flex;align-items:center;gap:14px;padding:16px;border-radius:16px;border:1px solid rgba(0,102,255,.5);background:linear-gradient(135deg,rgba(0,102,255,.28),rgba(0,204,204,.2));color:#fff;cursor:pointer;text-align:left;width:100%;}
@@ -312,17 +309,14 @@ class TvhgcMusicCard extends HTMLElement {
       <div class="volrow">
         <span class="vic">${svg(ICON.vol, 20)}</span>
         <div class="slider master"><div class="strack"><div class="sfill"></div><div class="sknob"></div></div></div>
+        <button class="btn mvol">${svg(ICON.reset, 16, 2.2)}Defaults</button>
         <div style="position:relative">
-          <button class="btn drop"><span class="dlabel"></span>${svg(ICON.chev, 16)}</button>
+          <button class="btn drop" aria-label="Room volumes">${svg(ICON.chev, 18)}</button>
           <div class="pop" style="display:none">
-            <div class="pophead"><span class="ovl">Group volume</span><span class="popcnt"></span></div>
-            <div class="popmaster"><div class="rowlabel"><span style="font:700 14px/1 'DM Sans'">All rooms</span><span class="allpct" style="font:700 12px/1 'DM Sans'"></span></div>
-              <div class="slider master sm"><div class="strack"><div class="sfill" style="background:linear-gradient(90deg,#0c6678,#18b2c4)"></div><div class="sknob"></div></div></div></div>
+            <div class="pophead"><span class="ovl">Room volumes</span><span class="popcnt"></span></div>
             <div class="poprows">${popRooms}</div>
-            <button class="popset">Set all to master volume</button>
           </div>
         </div>
-        <button class="btn mvol act">${svg(ICON.bars, 16)}Master volume</button>
       </div>
     </div>
     <div class="panel">
@@ -341,12 +335,10 @@ class TvhgcMusicCard extends HTMLElement {
       prev: $(".prev"), pp: $(".pp"), next: $(".next"),
       pills: [...root.querySelectorAll(".pill")], grows: [...root.querySelectorAll(".grow")],
       splitbtn: $(".splitbtn"),
-      mFill: $(".slider.master .sfill"), mKnob: $(".slider.master .sknob"),
-      drop: $(".drop"), dlabel: $(".dlabel"), pop: $(".pop"), popcnt: $(".popcnt"),
-      allpct: $(".allpct"), mvol: $(".mvol"),
+      mFill: $(".slider.master .sfill"), mKnob: $(".slider.master .sknob"), mSlider: $(".slider.master"),
+      drop: $(".drop"), pop: $(".pop"), popcnt: $(".popcnt"), mvol: $(".mvol"),
       grid: $(".grid"), actions: [...root.querySelectorAll(".abtn")],
       prows: [...root.querySelectorAll(".prow")],
-      masterSliders: [...root.querySelectorAll(".slider.master")],
     };
 
     // events
@@ -357,14 +349,13 @@ class TvhgcMusicCard extends HTMLElement {
     this.$.next.addEventListener("click", () => this._next());
     this.$.pp.addEventListener("click", () => this._svc("media_player", "media_play_pause", { entity_id: this._coordRoom().entity }));
     this.$.bar.addEventListener("pointerdown", (e) => this._seekDrag(e));
-    this.$.masterSliders.forEach((el) => el.addEventListener("pointerdown", (e) => this._volDrag(e, "master")));
+    this.$.mSlider.addEventListener("pointerdown", (e) => this._volDrag(e, "master"));
     this.$.prows.forEach((el) => {
       el.querySelector(".slider").addEventListener("pointerdown", (e) => this._volDrag(e, +el.dataset.room));
       el.querySelector(".prdef").addEventListener("click", () => this._setVol(this._rooms[+el.dataset.room], this._rooms[+el.dataset.room].def, true));
     });
-    this.$.drop.addEventListener("click", (e) => { e.stopPropagation(); this._open = !this._open; this.$.mvol.classList.toggle("act", false); this._update(); });
-    this.$.mvol.addEventListener("click", () => this._syncMaster());
-    $(".popset").addEventListener("click", () => this._syncMaster());
+    this.$.drop.addEventListener("click", (e) => { e.stopPropagation(); this._open = !this._open; this._update(); });
+    this.$.mvol.addEventListener("click", () => this._setDefaults());
     this.$.actions.forEach((el) => el.addEventListener("click", () => this._runAction(+el.dataset.act)));
     this._renderTiles();
     this._onDoc = (e) => { if (this._open && !e.composedPath().includes(this.$.pop) && e.composedPath().indexOf(this.$.drop) < 0) { this._open = false; this._update(); } };
@@ -511,12 +502,16 @@ class TvhgcMusicCard extends HTMLElement {
   _volDrag(e, key) {
     e.preventDefault();
     const track = e.currentTarget; const rect = track.getBoundingClientRect();
-    const grouped = this._grouped();
+    // Master slider moves the whole group together (uniform shift, preserving each
+    // room's relative level); a per-room slider sets that one room absolutely.
+    const grouped = key === "master" ? this._grouped() : null;
+    const start = key === "master" ? this._masterVal() : 0;
+    const base = {}; if (grouped) grouped.forEach((r) => (base[r.entity] = this._vol(r)));
     const apply = (x) => {
-      let p = Math.round(Math.max(0, Math.min(1, (x - rect.left) / rect.width)) * 100);
+      const v = Math.round(Math.max(0, Math.min(1, (x - rect.left) / rect.width)) * 100);
       const now = Date.now();
-      if (key === "master") { this._drag = { master: true, val: p }; grouped.forEach((r) => { this._localVol[r.entity] = p; this._localVolAt[r.entity] = now; }); }
-      else { this._drag = { room: key, val: p }; this._localVol[this._rooms[key].entity] = p; this._localVolAt[this._rooms[key].entity] = now; }
+      if (key === "master") { this._drag = { master: true, val: v }; const d = v - start; grouped.forEach((r) => { this._localVol[r.entity] = Math.max(0, Math.min(100, base[r.entity] + d)); this._localVolAt[r.entity] = now; }); }
+      else { this._drag = { room: key, val: v }; this._localVol[this._rooms[key].entity] = v; this._localVolAt[this._rooms[key].entity] = now; }
       this._update();
     };
     apply(e.clientX);
@@ -530,10 +525,11 @@ class TvhgcMusicCard extends HTMLElement {
     else { const r = this._rooms[key]; this._svc("media_player", "volume_set", { entity_id: r.entity, volume_level: this._localVol[r.entity] / 100 }); }
   }
   _setVol(r, p, fire) { this._localVol[r.entity] = p; this._localVolAt[r.entity] = Date.now(); if (fire) this._svc("media_player", "volume_set", { entity_id: r.entity, volume_level: p / 100 }); this._update(); }
-  _syncMaster() {
-    const g = this._grouped(); const val = this._masterVal();
-    g.forEach((r) => this._svc("media_player", "volume_set", { entity_id: r.entity, volume_level: val / 100 }));
-    this._open = false; this._update();
+  // Set every grouped room to its own configured default volume.
+  _setDefaults() {
+    const now = Date.now();
+    this._grouped().forEach((r) => { this._localVol[r.entity] = r.def; this._localVolAt[r.entity] = now; this._svc("media_player", "volume_set", { entity_id: r.entity, volume_level: r.def / 100 }); });
+    this._update();
   }
   _masterVal() {
     if (this._drag && this._drag.master) return this._drag.val;
@@ -551,7 +547,7 @@ class TvhgcMusicCard extends HTMLElement {
         if ((real != null && Math.abs(real - this._localVol[e]) <= 2) || now - (this._localVolAt[e] || 0) > 3000) { delete this._localVol[e]; delete this._localVolAt[e]; }
       }
     }
-    const members = this._effMembers(); const coordE = this._coordEntity(); const focusE = this._focusRoom().entity;
+    const members = this._effMembers(); const coordE = this._coordEntity();
     const m = this._coordRoom(); const s = this._st(m.entity); const a = (s && s.attributes) || {};
     const grouped = this._grouped();
     // wash from art
@@ -560,21 +556,21 @@ class TvhgcMusicCard extends HTMLElement {
     // cover
     if (pic) { if (this.$.cover.getAttribute("src") !== pic) this.$.cover.src = pic; this.$.cover.style.display = ""; }
     else this.$.cover.style.display = "none";
-    // pills — focus = ring, selected group = turquoise, grouped elsewhere = dimmed
+    // pills — focused group's coordinator = ring/bright; followers = grey; other masters/solo = normal
     this._rooms.forEach((r, i) => {
-      const el = this.$.pills[i]; const inSel = members.has(r.entity);
-      const elsewhere = !inSel && this._groupMembersOf(r).length > 1;
-      el.classList.toggle("sel", inSel && members.size > 1);
-      el.classList.toggle("focus", r.entity === focusE);
-      el.classList.toggle("dim", elsewhere);
+      const el = this.$.pills[i]; const gm = this._groupMembersOf(r);
+      const isFollower = gm.length > 1 && gm[0] !== r.entity;
+      el.classList.toggle("current", r.entity === coordE);
+      el.classList.toggle("follower", isFollower && r.entity !== coordE);
     });
-    // group rows — coordinator anchor / in group / in another group / available
+    // group rows — coordinator anchor / in group / available (stands out) / in another group (amber)
     const playing = s && s.state === "playing";
     this._rooms.forEach((r, i) => {
       const el = this.$.grows[i]; const inSel = members.has(r.entity); const isCoord = r.entity === coordE;
       const elsewhere = !inSel && this._groupMembersOf(r).length > 1;
       el.classList.toggle("master", isCoord);
       el.classList.toggle("grp", inSel && !isCoord);
+      el.classList.toggle("avail", !inSel && !elsewhere);
       el.classList.toggle("other", elsewhere);
       el.style.background = isCoord && this._pillColor ? this._pillColor : "";
       const sub = el.querySelector(".gs"); const tog = el.querySelector(".gtog");
@@ -600,17 +596,13 @@ class TvhgcMusicCard extends HTMLElement {
       this.$.barF.style.width = pct + "%"; this.$.barK.style.left = pct + "%";
       this.$.el.textContent = fmt(pos); this.$.du.textContent = dur ? fmt(dur) : "—";
     }
-    // volume master slider
+    // volume — master slider shows the group level (average); popover = per-room
     const mv = this._masterVal();
     this.$.mFill.style.width = mv + "%"; this.$.mKnob.style.left = mv + "%";
-    this.$.dlabel.textContent = grouped.length ? `${m.name}${grouped.length > 1 ? " +" + (grouped.length - 1) : ""}` : m.name;
-    this.$.mvol.classList.toggle("act", !this._open);
     this.$.drop.classList.toggle("act", this._open);
     this.$.pop.style.display = this._open ? "" : "none";
     if (this._open) {
       this.$.popcnt.textContent = grouped.length + (grouped.length === 1 ? " room" : " rooms");
-      this.$.allpct.textContent = mv + "%";
-      this.$.masterSliders.forEach((sl) => { sl.querySelector(".sfill").style.width = mv + "%"; sl.querySelector(".sknob").style.left = mv + "%"; });
       this._rooms.forEach((r, i) => {
         const row = this.$.prows[i]; const show = members.has(r.entity); row.style.display = show ? "" : "none";
         if (!show) return;
