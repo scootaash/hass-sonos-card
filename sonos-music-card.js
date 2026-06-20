@@ -1,13 +1,15 @@
 /* Sonos Music Card — multi-room music player (Immersive) for Home Assistant.
    Live native Sonos grouping (group_members + join/unjoin), helper-free. */
 const TEAL = "linear-gradient(155deg,#0c4a5a 0%,#0a3140 52%,#06222e 100%)";
-const VERSION = "0.4.0";
+const VERSION = "0.5.0";
 const ICON = {
   prev: '<polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line>',
   next: '<polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line>',
   check: '<polyline points="20 6 9 17 4 12"></polyline>',
   plus: '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>',
+  minus: '<line x1="5" y1="12" x2="19" y2="12"></line>',
   move: '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line>',
+  exit: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line>',
   split: '<polyline points="15 14 20 9 15 4"></polyline><path d="M4 20v-7a4 4 0 0 1 4-4h12"></path>',
   reset: '<path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.4 2.6L3 8"></path><path d="M3 3v5h5"></path>',
   vol: '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>',
@@ -189,7 +191,7 @@ class SonosMusicCard extends HTMLElement {
     const actionBtns = this._actions.map((a, i) =>
       `<button class="abtn" data-act="${i}"><span class="abic">${this._icon(a.icon, 22)}</span><span style="min-width:0"><span class="abt1">${esc(a.name)}</span><span class="abt2"></span></span></button>`).join("");
     const popRooms = this._rooms.map((r, i) =>
-      `<div class="prow" data-room="${i}"><div class="prhead"><span class="prn">${esc(r.name)}</span><div class="prr"><button class="prdef" data-room="${i}">${svg(ICON.reset, 12, 2.2)}Default</button><span class="prpct"></span></div></div><div class="slider sm" data-room="${i}"><div class="strack"><div class="sfill"></div><div class="sknob"></div></div></div></div>`).join("");
+      `<div class="prow" data-room="${i}"><div class="prhead"><span class="prn">${esc(r.name)}</span><div class="prr"><button class="prdef" data-room="${i}" aria-label="Reset to default">${svg(ICON.reset, 14, 2.2)}</button><span class="prpct"></span></div></div><div class="prslide"><button class="vbtn rdn" data-room="${i}" aria-label="Volume down">${svg(ICON.minus, 16, 2.6)}</button><div class="slider sm" data-room="${i}"><div class="strack"><div class="sfill"></div><div class="sknob"></div></div></div><button class="vbtn rup" data-room="${i}" aria-label="Volume up">${svg(ICON.plus, 16, 2.6)}</button></div></div>`).join("");
 
     root.innerHTML = `<style>
 :host{display:block;}
@@ -209,7 +211,8 @@ class SonosMusicCard extends HTMLElement {
 .pill .dot{width:7px;height:7px;border-radius:99px;background:rgba(255,255,255,.3);}
 .pill.current{background:rgba(0,204,204,.16);border-color:rgba(0,204,204,.55);color:#fff;box-shadow:inset 0 0 0 2px #18b2c4;}
 .pill.current .dot{background:#eafdff;box-shadow:0 0 0 3px rgba(24,178,196,.55);}
-.pill.follower{opacity:.4;background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.1);color:rgba(255,255,255,.6);}
+.pill.follower{opacity:.55;background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.1);color:rgba(255,255,255,.6);}
+.pill.follower:hover{opacity:.85;}
 .pill.follower .dot{background:rgba(255,255,255,.25);}
 .player{flex:1;display:flex;gap:22px;min-height:0;}
 .art{position:relative;flex:none;width:498px;height:498px;border-radius:20px;overflow:hidden;background:linear-gradient(150deg,#1bb6c7,#0c5f72 48%,#07303f);}
@@ -233,38 +236,43 @@ class SonosMusicCard extends HTMLElement {
 .tr .pp{width:74px;height:74px;border-radius:99px;background:#fff;color:#07303f;}
 .gcol{flex:1;display:flex;flex-direction:column;gap:10px;min-width:0;}
 .gchead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
-.splitbtn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:rgba(255,255,255,.85);font:600 11px/1.1 'DM Sans';cursor:pointer;}
-.splitbtn:hover{background:rgba(255,255,255,.14);}
+.ghbtns{display:flex;gap:8px;flex-wrap:wrap;}
+.splitbtn,.addall{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:rgba(255,255,255,.85);font:600 11px/1.1 'DM Sans';cursor:pointer;}
+.splitbtn:hover,.addall:hover{background:rgba(255,255,255,.14);}
+.addall{border-color:rgba(0,204,204,.45);color:#bdeef2;}
 .glist{flex:1;display:flex;flex-direction:column;gap:9px;}
 .grow{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);cursor:pointer;}
 .gtext{display:flex;flex-direction:column;gap:2px;min-width:0;}
 .gn{font:600 15px/1.2 'DM Sans';color:rgba(255,255,255,.92);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .gs{font:500 11px/1 'DM Sans';letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;color:rgba(255,255,255,.45);}
-.grow.grp{background:rgba(0,204,204,.07);border-color:rgba(0,204,204,.28);} .grow.grp .gs{color:#7fe9ef;}
-.grow.master{border-color:rgba(24,178,196,.5);} .grow.master .gs{color:#7fe9ef;}
-.grow.avail{background:rgba(0,204,204,.15);border-color:rgba(0,204,204,.55);} .grow.avail .gn{color:#fff;} .grow.avail .gs{color:#8ff0f5;}
-.grow.other{background:rgba(232,145,58,.06);border-color:rgba(232,145,58,.38);} .grow.other .gs{color:#f3c18a;}
+.grow.grp{background:rgba(0,102,255,.14);border-color:rgba(0,102,255,.5);} .grow.grp .gs{color:#9cc0ff;}
+.grow.master{background:rgba(0,204,204,.16);border-color:rgba(0,204,204,.55);box-shadow:inset 0 0 0 2px #18b2c4;} .grow.master .gs{color:#7fe9ef;}
 .gtog{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:none;border-radius:99px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);cursor:pointer;flex:none;}
-.grow.grp .gtog{background:rgba(0,204,204,.55);color:#06303d;}
+.grow.grp .gtog{background:#0066FF;color:#fff;}
 .grow.master .gtog{background:#18b2c4;color:#06303d;}
-.grow.avail .gtog{background:#18b2c4;color:#06303d;box-shadow:0 0 0 4px rgba(24,178,196,.22);}
-.grow.other .gtog{background:#e8913a;color:#3a1e06;}
-.volrow{position:relative;display:flex;align-items:center;gap:16px;padding:16px 20px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);}
-.slider{position:relative;height:20px;display:flex;align-items:center;cursor:pointer;touch-action:none;flex:1;}
-.slider .strack{position:relative;width:100%;height:6px;border-radius:99px;background:rgba(255,255,255,.2);}
+.gtog.move{background:rgba(232,145,58,.2);color:#f3c18a;box-shadow:inset 0 0 0 1px rgba(232,145,58,.5);}
+.volrow{position:relative;display:flex;flex-direction:column;gap:12px;padding:16px 20px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);}
+.volmain{display:flex;align-items:center;gap:12px;}
+.voltools{display:flex;align-items:center;justify-content:flex-end;gap:10px;}
+.mpct{font:700 13px/1 'DM Sans';color:#7fe9ef;min-width:40px;text-align:right;}
+.vbtn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;flex:none;}
+.vbtn:hover{background:rgba(255,255,255,.16);}
+.slider{position:relative;height:24px;display:flex;align-items:center;cursor:pointer;touch-action:none;flex:1;}
+.slider .strack{position:relative;width:100%;height:8px;border-radius:99px;background:rgba(255,255,255,.2);}
 .slider .sfill{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,#0c6678,#18b2c4);width:0;}
-.slider .sknob{position:absolute;top:50%;width:18px;height:18px;border-radius:99px;background:#fff;transform:translate(-50%,-50%);left:0;}
+.slider .sknob{position:absolute;top:50%;width:20px;height:20px;border-radius:99px;background:#fff;transform:translate(-50%,-50%);left:0;}
 .btn{display:inline-flex;align-items:center;gap:8px;border-radius:99px;font:600 14px/1 'DM Sans';cursor:pointer;white-space:nowrap;padding:10px 16px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.18);}
 .btn.act{background:#18b2c4;color:#06303d;border-color:transparent;}
-.drop{padding:10px 12px;}
+.btn.icon{padding:9px 11px;}
 .pop{position:absolute;bottom:calc(100% + 12px);right:0;width:340px;max-width:calc(100vw - 32px);padding:18px;border-radius:16px;background:#0a2f3c;border:1px solid rgba(255,255,255,.14);z-index:30;}
 .pophead,.prhead{display:flex;align-items:center;justify-content:space-between;}
 .popcnt{font:600 12px/1 'DM Sans';color:#7fe9ef;}
 .poprows{display:flex;flex-direction:column;gap:16px;margin-top:16px;}
 .prn{font:600 14px/1 'DM Sans';color:#fff;}
-.prr{display:flex;align-items:center;gap:10px;}
-.prdef{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.82);font:600 11px/1 'DM Sans';cursor:pointer;}
+.prr{display:flex;align-items:center;gap:8px;}
+.prdef{display:inline-flex;align-items:center;justify-content:center;padding:6px 8px;border-radius:99px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.82);cursor:pointer;}
 .prpct{font:700 12px/1 'DM Sans';color:#7fe9ef;min-width:34px;text-align:right;}
+.prslide{display:flex;align-items:center;gap:10px;margin-top:8px;}
 .sm .strack{background:rgba(255,255,255,.15);} .sm .sfill{background:#18b2c4;}
 .panel{flex:none;width:386px;display:flex;flex-direction:column;gap:16px;padding:24px;border-radius:20px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);}
 .actions{display:flex;flex-direction:column;gap:10px;}
@@ -304,17 +312,24 @@ class SonosMusicCard extends HTMLElement {
             </div>
           </div>
         </div>
-        <div class="gcol"><div class="gchead"><span class="ovl">Tap to add to group</span><button class="splitbtn" style="display:none"></button></div><div class="glist">${grows}</div></div>
+        <div class="gcol"><div class="gchead"><span class="ovl">Tap to add to group</span><div class="ghbtns"><button class="addall" style="display:none"></button><button class="splitbtn" style="display:none"></button></div></div><div class="glist">${grows}</div></div>
       </div>
       <div class="volrow">
-        <span class="vic">${svg(ICON.vol, 20)}</span>
-        <div class="slider master"><div class="strack"><div class="sfill"></div><div class="sknob"></div></div></div>
-        <button class="btn mvol">${svg(ICON.reset, 16, 2.2)}Defaults</button>
-        <div style="position:relative">
-          <button class="btn drop" aria-label="Room volumes">${svg(ICON.chev, 18)}</button>
+        <div class="volmain">
+          <span class="vic">${svg(ICON.vol, 20)}</span>
+          <button class="vbtn mdn" aria-label="Group volume down">${svg(ICON.minus, 18, 2.6)}</button>
+          <div class="slider master"><div class="strack"><div class="sfill"></div><div class="sknob"></div></div></div>
+          <button class="vbtn mup" aria-label="Group volume up">${svg(ICON.plus, 18, 2.6)}</button>
+          <span class="mpct"></span>
+        </div>
+        <div class="voltools">
+          <button class="btn mvol icon" aria-label="Reset all to defaults">${svg(ICON.reset, 16, 2.2)}</button>
+          <div style="position:relative">
+          <button class="btn drop icon" aria-label="Room volumes">${svg(ICON.chev, 18)}</button>
           <div class="pop" style="display:none">
             <div class="pophead"><span class="ovl">Room volumes</span><span class="popcnt"></span></div>
             <div class="poprows">${popRooms}</div>
+          </div>
           </div>
         </div>
       </div>
@@ -334,8 +349,9 @@ class SonosMusicCard extends HTMLElement {
       barF: $(".bar .f"), barK: $(".bar .k"), bar: $(".bar"),
       prev: $(".prev"), pp: $(".pp"), next: $(".next"),
       pills: [...root.querySelectorAll(".pill")], grows: [...root.querySelectorAll(".grow")],
-      splitbtn: $(".splitbtn"),
+      splitbtn: $(".splitbtn"), addall: $(".addall"),
       mFill: $(".slider.master .sfill"), mKnob: $(".slider.master .sknob"), mSlider: $(".slider.master"),
+      mdn: $(".mdn"), mup: $(".mup"), mpct: $(".mpct"),
       drop: $(".drop"), pop: $(".pop"), popcnt: $(".popcnt"), mvol: $(".mvol"),
       grid: $(".grid"), actions: [...root.querySelectorAll(".abtn")],
       prows: [...root.querySelectorAll(".prow")],
@@ -345,14 +361,20 @@ class SonosMusicCard extends HTMLElement {
     this.$.pills.forEach((el) => el.addEventListener("click", () => this._selectGroup(+el.dataset.room)));
     this.$.grows.forEach((el) => el.addEventListener("click", () => this._toggleGroup(+el.dataset.room)));
     this.$.splitbtn.addEventListener("click", () => this._splitFocus());
+    this.$.addall.addEventListener("click", () => this._addAll());
     this.$.prev.addEventListener("click", () => this._prev());
     this.$.next.addEventListener("click", () => this._next());
     this.$.pp.addEventListener("click", () => this._svc("media_player", "media_play_pause", { entity_id: this._coordRoom().entity }));
     this.$.bar.addEventListener("pointerdown", (e) => this._seekDrag(e));
     this.$.mSlider.addEventListener("pointerdown", (e) => this._volDrag(e, "master"));
+    this.$.mdn.addEventListener("click", () => this._nudge("master", -5));
+    this.$.mup.addEventListener("click", () => this._nudge("master", 5));
     this.$.prows.forEach((el) => {
-      el.querySelector(".slider").addEventListener("pointerdown", (e) => this._volDrag(e, +el.dataset.room));
-      el.querySelector(".prdef").addEventListener("click", () => this._setVol(this._rooms[+el.dataset.room], this._rooms[+el.dataset.room].def, true));
+      const i = +el.dataset.room;
+      el.querySelector(".slider").addEventListener("pointerdown", (e) => this._volDrag(e, i));
+      el.querySelector(".prdef").addEventListener("click", () => this._setVol(this._rooms[i], this._rooms[i].def, true));
+      el.querySelector(".rdn").addEventListener("click", () => this._nudge(i, -5));
+      el.querySelector(".rup").addEventListener("click", () => this._nudge(i, 5));
     });
     this.$.drop.addEventListener("click", (e) => { e.stopPropagation(); this._open = !this._open; this._update(); });
     this.$.mvol.addEventListener("click", () => this._setDefaults());
@@ -531,6 +553,23 @@ class SonosMusicCard extends HTMLElement {
     this._grouped().forEach((r) => { this._localVol[r.entity] = r.def; this._localVolAt[r.entity] = now; this._svc("media_player", "volume_set", { entity_id: r.entity, volume_level: r.def / 100 }); });
     this._update();
   }
+  // +/- buttons: nudge the group (relative, all grouped rooms) or one room by delta.
+  _nudge(key, delta) {
+    const now = Date.now();
+    const bump = (r) => { const v = Math.max(0, Math.min(100, this._vol(r) + delta)); this._localVol[r.entity] = v; this._localVolAt[r.entity] = now; this._svc("media_player", "volume_set", { entity_id: r.entity, volume_level: v / 100 }); };
+    if (key === "master") this._grouped().forEach(bump);
+    else { const r = this._rooms[key]; if (r) bump(r); }
+    this._update();
+  }
+  // Add every speaker that isn't already in the focused group, in one join call.
+  _addAll() {
+    const coord = this._coordRoom();
+    const out = this._rooms.filter((r) => !this._effMembers().has(r.entity));
+    if (!out.length) return;
+    out.forEach((r) => this._optGroup(r.entity, true));
+    this._svc("media_player", "join", { entity_id: coord.entity, group_members: out.map((r) => r.entity) });
+    this._update();
+  }
   _masterVal() {
     if (this._drag && this._drag.master) return this._drag.val;
     const g = this._grouped(); if (!g.length) return 0;
@@ -568,21 +607,24 @@ class SonosMusicCard extends HTMLElement {
     this._rooms.forEach((r, i) => {
       const el = this.$.grows[i]; const inSel = members.has(r.entity); const isCoord = r.entity === coordE;
       const elsewhere = !inSel && this._groupMembersOf(r).length > 1;
-      el.classList.toggle("master", isCoord);
-      el.classList.toggle("grp", inSel && !isCoord);
-      el.classList.toggle("avail", !inSel && !elsewhere);
-      el.classList.toggle("other", elsewhere);
-      el.style.background = isCoord && this._pillColor ? this._pillColor : "";
+      el.classList.toggle("master", isCoord);            // highlighted current style
+      el.classList.toggle("grp", inSel && !isCoord);     // blue = in the group
+      // not in the group → default grey row; the move button alone flags "in another group"
       const sub = el.querySelector(".gs"); const tog = el.querySelector(".gtog");
+      tog.classList.toggle("move", elsewhere);
       if (isCoord) { sub.textContent = playing ? "Master · playing" : "Master"; tog.innerHTML = svg(ICON.check, 18, 3); }
       else if (inSel) { sub.textContent = "In group"; tog.innerHTML = svg(ICON.check, 18, 3); }
-      else if (elsewhere) { const c = this._roomByEntity(this._groupMembersOf(r)[0]); sub.textContent = "Move from " + (c ? c.name : this._friendly(this._groupMembersOf(r)[0])); tog.innerHTML = svg(ICON.move, 18, 2.2); }
+      else if (elsewhere) { const c = this._roomByEntity(this._groupMembersOf(r)[0]); sub.textContent = "Move from " + (c ? c.name : this._friendly(this._groupMembersOf(r)[0])); tog.innerHTML = svg(ICON.exit, 18, 2.2); }
       else { sub.textContent = "Available"; tog.innerHTML = svg(ICON.plus, 18, 2.4); }
     });
     // split button — make the focused speaker its own group (when it's grouped)
     const canSplit = members.size > 1;
     this.$.splitbtn.style.display = canSplit ? "" : "none";
     if (canSplit) this.$.splitbtn.innerHTML = svg(ICON.split, 14, 2.2) + "<span>Make " + esc(this._focusRoom().name) + " its own group</span>";
+    // add-all button — join every speaker not already in the focused group
+    const anyOut = this._rooms.some((r) => !members.has(r.entity));
+    this.$.addall.style.display = anyOut ? "" : "none";
+    if (anyOut) this.$.addall.innerHTML = svg(ICON.plus, 13, 2.6) + "<span>Add all</span>";
     // now playing
     this.$.t1.textContent = a.media_title || (s ? (s.state === "idle" ? "Nothing playing" : m.name) : "No data");
     this.$.t2.textContent = a.media_artist || a.media_album_name || "";
@@ -599,6 +641,7 @@ class SonosMusicCard extends HTMLElement {
     // volume — master slider shows the group level (average); popover = per-room
     const mv = this._masterVal();
     this.$.mFill.style.width = mv + "%"; this.$.mKnob.style.left = mv + "%";
+    this.$.mpct.textContent = grouped.length ? mv + "%" : "";
     this.$.drop.classList.toggle("act", this._open);
     this.$.pop.style.display = this._open ? "" : "none";
     if (this._open) {
