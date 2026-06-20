@@ -1,7 +1,7 @@
 /* TVHGC multi-room music player card (Immersive) for Home Assistant.
    Live native Sonos grouping (group_members + join/unjoin), helper-free. */
 const TEAL = "linear-gradient(155deg,#0c4a5a 0%,#0a3140 52%,#06222e 100%)";
-const VERSION = "0.2.0";
+const VERSION = "0.2.1";
 const ICON = {
   prev: '<polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line>',
   next: '<polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line>',
@@ -92,8 +92,16 @@ class TvhgcMusicCard extends HTMLElement {
   connectedCallback() {
     try { if (this._hass && !this._built) this._build(); } catch (e) { this._renderError(e); }
     this._timer = setInterval(() => { if (this._errored || !this._hass) return; try { this._update(); } catch (e) { this._renderError(e); } }, 500);
-    this._ro = new ResizeObserver(() => this._resize());
-    if (this._root) this._ro.observe(this._root);
+    this._observe();
+  }
+  // Attach the ResizeObserver to the (possibly just-built) root. Build and connect
+  // can happen in either order, so (re)observe whenever we have a root.
+  _observe() {
+    if (!this._root || typeof ResizeObserver === "undefined") return;
+    if (!this._ro) this._ro = new ResizeObserver(() => this._resize());
+    this._ro.disconnect();
+    this._ro.observe(this._root);
+    requestAnimationFrame(() => this._resize());
   }
   disconnectedCallback() {
     clearInterval(this._timer);
@@ -359,12 +367,13 @@ class TvhgcMusicCard extends HTMLElement {
     this._renderTiles();
     this._onDoc = (e) => { if (this._open && !e.composedPath().includes(this.$.pop) && e.composedPath().indexOf(this.$.drop) < 0) { this._open = false; this._update(); } };
     document.addEventListener("click", this._onDoc);
-    this._resize();
+    this._observe();
   }
 
   _resize() {
     if (!this._root) return;
     const w = this._root.clientWidth;
+    if (!w) return; // not laid out yet — keep the default (landscape) until we have a real width
     this._root.classList.toggle("narrow", w < 1040);
     this._root.classList.toggle("stack", w < 760);
     this._root.classList.toggle("phone", w < 480);
