@@ -115,6 +115,8 @@ card.hass = hass; // re-render after interactions
 (async () => {
   await new Promise((r) => setTimeout(r, 20));
   try { card.hass = hass; } catch (err) { errs++; console.log("POST-BROWSE ERR:", err.message); }
+  // The render error boundary must not have fired (it swallows throws into a message).
+  if (card._lastError) { errs++; console.log("RENDER BOUNDARY TRIPPED:", card._lastError.message); }
   card.disconnectedCallback();
   console.log("handlers fired:", fired, "errors:", errs, "serviceCalls:", (hass._calls || []).length, "browsedPlaylists:", (card._playlists || []).length);
   console.log(errs ? "SMOKE FAIL: " + file : "SMOKE OK: " + file);

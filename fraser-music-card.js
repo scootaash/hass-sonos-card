@@ -1,6 +1,7 @@
 /* TVHGC multi-room music player card (Immersive) for Home Assistant.
    Live native Sonos grouping (group_members + join/unjoin), helper-free. */
 const TEAL = "linear-gradient(155deg,#0c4a5a 0%,#0a3140 52%,#06222e 100%)";
+const VERSION = "0.2.0";
 const ICON = {
   prev: '<polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line>',
   next: '<polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line>',
@@ -34,7 +35,7 @@ const fmt = (s) => { s = Math.max(0, Math.round(s || 0)); return Math.floor(s / 
 class TvhgcMusicCard extends HTMLElement {
   setConfig(config) {
     if (!config || !Array.isArray(config.rooms) || !config.rooms.length)
-      throw new Error("fraser-music-card: `rooms` is required");
+      throw new Error("fraser-music-card: `rooms` must be a non-empty list, each with at least an `entity` (the Sonos media_player.*). See the README for an example.");
     this._cfg = config;
     this._rooms = config.rooms.map((r) => ({
       name: r.name || r.entity,
@@ -42,6 +43,8 @@ class TvhgcMusicCard extends HTMLElement {
       massEntity: r.mass_entity || null,
       def: r.default_volume != null ? r.default_volume : 40,
     }));
+    const noEntity = this._rooms.find((r) => !r.entity);
+    if (noEntity) throw new Error("fraser-music-card: every room needs an `entity` (its Sonos media_player.*); add it to: " + JSON.stringify(noEntity.name || "(unnamed room)"));
     // Action buttons — generic list; legacy `audiobook:` maps to a single action.
     const ab = config.audiobook;
     const actionsCfg = config.actions || (ab ? {
@@ -78,20 +81,37 @@ class TvhgcMusicCard extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    if (!this._built) this._build();
-    this._update();
+    try {
+      if (!this._built) this._build();
+      this._update();
+      this._errored = false; this._lastError = null;
+    } catch (e) { this._renderError(e); return; }
     this._browsePlaylists();
   }
   getCardSize() { return 14; }
   connectedCallback() {
-    if (this._hass && !this._built) this._build();
-    this._timer = setInterval(() => this._update(), 500);
+    try { if (this._hass && !this._built) this._build(); } catch (e) { this._renderError(e); }
+    this._timer = setInterval(() => { if (this._errored || !this._hass) return; try { this._update(); } catch (e) { this._renderError(e); } }, 500);
     this._ro = new ResizeObserver(() => this._resize());
     if (this._root) this._ro.observe(this._root);
   }
   disconnectedCallback() {
     clearInterval(this._timer);
     if (this._ro) this._ro.disconnect();
+  }
+  // Render error boundary — never leave a blank card; show why + how to fix.
+  _renderError(err) {
+    this._errored = true; this._lastError = err;
+    try { console.error("fraser-music-card:", err); } catch (e) {}
+    const root = this.shadowRoot || (this.attachShadow ? this.attachShadow({ mode: "open" }) : this);
+    const msg = esc(err && err.message ? err.message : String(err));
+    try {
+      root.innerHTML = `<div style="font-family:'DM Sans',system-ui,sans-serif;background:linear-gradient(155deg,#3a1320,#2a0e18);color:#fff;border:1px solid #a83a52;border-radius:16px;padding:20px 22px;line-height:1.45;">
+        <div style="font-weight:700;font-size:15px;margin-bottom:8px">Fraser Music Card couldn't render</div>
+        <div style="font-size:13px;white-space:pre-wrap;color:#ffd9e0">${msg}</div>
+        <div style="font-size:12px;margin-top:10px;color:rgba(255,255,255,.7)">If you just changed the config or updated the card, hard-refresh to clear the cached version (Ctrl/Cmd-Shift-R) and check Settings → Dashboards → Resources has a single, up-to-date entry. Loaded card version: v${VERSION}.</div>
+      </div>`;
+    } catch (e) {}
   }
 
   _st(id) { return this._hass && this._hass.states[id]; }
@@ -618,6 +638,9 @@ class TvhgcMusicCard extends HTMLElement {
   }
 }
 
-customElements.define("fraser-music-card", TvhgcMusicCard);
+if (!customElements.get("fraser-music-card")) {
+  customElements.define("fraser-music-card", TvhgcMusicCard);
+  try { console.info(`%c fraser-music-card %c v${VERSION} `, "background:#18b2c4;color:#06303d;border-radius:3px 0 0 3px;font-weight:700", "background:#0a2f3c;color:#7fe9ef;border-radius:0 3px 3px 0"); } catch (e) {}
+}
 window.customCards = window.customCards || [];
 window.customCards.push({ type: "fraser-music-card", name: "Fraser Music Player", description: "Immersive multi-room music player", preview: false });
