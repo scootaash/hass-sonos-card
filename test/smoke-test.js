@@ -44,7 +44,7 @@ global.document = {
   addEventListener() {},
 };
 let CardClass = null;
-global.customElements = { define(name, cls) { CardClass = cls; }, get() { return null; } };
+global.customElements = { define(name, cls) { if (name === "sonos-music-card") CardClass = cls; }, get() { return null; } };
 
 eval(fs.readFileSync(file, "utf8"));
 
@@ -76,8 +76,8 @@ const hass = {
 const cfg = {
   default_room: "media_player.kitchen",
   rooms: [
-    { name: "Lounge", entity: "media_player.lounge", mass_entity: "media_player.mass_lounge", default_volume: 29 },
-    { name: "Kitchen", entity: "media_player.kitchen", mass_entity: "media_player.mass_kitchen", default_volume: 36 },
+    { name: "Lounge", entity: "media_player.lounge", mass_entity: "media_player.mass_lounge", icon: "mdi:sofa", default_volume: 29 },
+    { name: "Kitchen", entity: "media_player.kitchen", mass_entity: "media_player.mass_kitchen", icon: "mdi:fridge", default_volume: 36 },
     { name: "Master Bedroom", entity: "media_player.master_bedroom", mass_entity: "media_player.mass_master_bedroom", default_volume: 42 },
     { name: "Garage", entity: "media_player.garage", mass_entity: "media_player.mass_garage", default_volume: 25 },
     { name: "Spare Room", entity: "media_player.spare_room", mass_entity: "media_player.mass_spare_room", default_volume: 34 },

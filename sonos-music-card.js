@@ -1,7 +1,7 @@
 /* Sonos Music Card — multi-room music player (Immersive) for Home Assistant.
    Live native Sonos grouping (group_members + join/unjoin), helper-free. */
 const TEAL = "linear-gradient(155deg,#0c4a5a 0%,#0a3140 52%,#06222e 100%)";
-const VERSION = "0.5.0";
+const VERSION = "0.6.0";
 const ICON = {
   prev: '<polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line>',
   next: '<polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line>',
@@ -43,6 +43,7 @@ class SonosMusicCard extends HTMLElement {
       name: r.name || r.entity,
       entity: r.entity,
       massEntity: r.mass_entity || null,
+      icon: r.icon || null,
       def: r.default_volume != null ? r.default_volume : 40,
     }));
     const noEntity = this._rooms.find((r) => !r.entity);
@@ -93,6 +94,14 @@ class SonosMusicCard extends HTMLElement {
     this._browsePlaylists();
   }
   getCardSize() { return 14; }
+  // Visual GUI editor (shown when editing the card in a dashboard).
+  static getConfigElement() { return document.createElement("sonos-music-card-editor"); }
+  static getStubConfig(hass) {
+    const players = hass ? Object.keys(hass.states).filter((e) => e.startsWith("media_player.") && !e.includes("mass_")) : [];
+    const e = players[0] || "media_player.living_room";
+    const name = (hass && hass.states[e] && hass.states[e].attributes.friendly_name) || "Room 1";
+    return { rooms: [{ name, entity: e, default_volume: 30 }] };
+  }
   connectedCallback() {
     try { if (this._hass && !this._built) this._build(); } catch (e) { this._renderError(e); }
     this._timer = setInterval(() => { if (this._errored || !this._hass) return; try { this._update(); } catch (e) { this._renderError(e); } }, 500);
@@ -185,9 +194,11 @@ class SonosMusicCard extends HTMLElement {
     this._built = true;
     const root = this.attachShadow ? (this.shadowRoot || this.attachShadow({ mode: "open" })) : this;
     const pills = this._rooms.map((r, i) =>
-      `<button class="pill" data-room="${i}"><span class="dot"></span><span class="pn">${esc(r.name)}</span></button>`).join("");
+      r.icon
+        ? `<button class="pill picon" data-room="${i}" title="${esc(r.name)}" aria-label="${esc(r.name)}">${this._icon(r.icon, 20)}</button>`
+        : `<button class="pill" data-room="${i}"><span class="dot"></span><span class="pn">${esc(r.name)}</span></button>`).join("");
     const grows = this._rooms.map((r, i) =>
-      `<div class="grow" data-room="${i}"><div class="gtext"><span class="gn">${esc(r.name)}</span><span class="gs"></span></div><button class="gtog" data-room="${i}"></button></div>`).join("");
+      `<div class="grow" data-room="${i}">${r.icon ? `<span class="gicon">${this._icon(r.icon, 22)}</span>` : ""}<div class="gtext"><span class="gn">${esc(r.name)}</span><span class="gs"></span></div><button class="gtog" data-room="${i}"></button></div>`).join("");
     const actionBtns = this._actions.map((a, i) =>
       `<button class="abtn" data-act="${i}"><span class="abic">${this._icon(a.icon, 22)}</span><span style="min-width:0"><span class="abt1">${esc(a.name)}</span><span class="abt2"></span></span></button>`).join("");
     const popRooms = this._rooms.map((r, i) =>
@@ -208,6 +219,8 @@ class SonosMusicCard extends HTMLElement {
 .col{display:flex;flex-direction:column;gap:10px;}
 .pillrow{display:flex;gap:10px;flex-wrap:wrap;}
 .pill{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:99px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.07);color:rgba(255,255,255,.78);font:500 14px/1 'DM Sans';cursor:pointer;transition:opacity .2s;}
+.pill.picon{padding:9px 12px;}
+.pill.picon ha-icon{--mdc-icon-size:22px;display:block;}
 .pill .dot{width:7px;height:7px;border-radius:99px;background:rgba(255,255,255,.3);}
 .pill.current{background:rgba(0,204,204,.16);border-color:rgba(0,204,204,.55);color:#fff;box-shadow:inset 0 0 0 2px #18b2c4;}
 .pill.current .dot{background:#eafdff;box-shadow:0 0 0 3px rgba(24,178,196,.55);}
@@ -241,8 +254,10 @@ class SonosMusicCard extends HTMLElement {
 .splitbtn:hover,.addall:hover{background:rgba(255,255,255,.14);}
 .addall{border-color:rgba(0,204,204,.45);color:#bdeef2;}
 .glist{flex:1;display:flex;flex-direction:column;gap:9px;}
-.grow{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);cursor:pointer;}
-.gtext{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.grow{display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);cursor:pointer;}
+.gicon{display:inline-flex;align-items:center;justify-content:center;width:26px;flex:none;color:rgba(255,255,255,.85);}
+.gicon ha-icon{--mdc-icon-size:24px;}
+.gtext{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;}
 .gn{font:600 15px/1.2 'DM Sans';color:rgba(255,255,255,.92);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .gs{font:500 11px/1 'DM Sans';letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;color:rgba(255,255,255,.45);}
 .grow.grp{background:rgba(0,102,255,.14);border-color:rgba(0,102,255,.5);} .grow.grp .gs{color:#9cc0ff;}
@@ -711,6 +726,78 @@ class SonosMusicCard extends HTMLElement {
     requestAnimationFrame(() => requestAnimationFrame(() => { if (this.$) this.$.wash.style.opacity = "1"; }));
   }
 }
+
+// Visual config editor (light DOM, HA form helpers). Edits the same YAML schema;
+// preserves actions:/playlists: and any other keys untouched.
+class SonosMusicCardEditor extends HTMLElement {
+  setConfig(config) {
+    this._config = Object.assign({ rooms: [] }, config || {});
+    if (!Array.isArray(this._config.rooms)) this._config.rooms = [];
+    this._rebuild();
+  }
+  set hass(hass) { this._hass = hass; this._applyHass(); }
+  _emit() { this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: this._config }, bubbles: true, composed: true })); }
+  _setTop(key, val) {
+    this._config = Object.assign({}, this._config);
+    if (val === undefined || val === "" || val === null) delete this._config[key]; else this._config[key] = val;
+    this._emit();
+  }
+  _setRoom(i, key, val) {
+    const rooms = this._config.rooms.map((r, j) => (j === i ? Object.assign({}, r) : r));
+    if (val === undefined || val === "" || val === null) delete rooms[i][key]; else rooms[i][key] = val;
+    this._config = Object.assign({}, this._config, { rooms });
+    this._emit();
+  }
+  _addRoom() { this._config = Object.assign({}, this._config, { rooms: this._config.rooms.concat([{ name: "", entity: "" }]) }); this._emit(); this._rebuild(); }
+  _removeRoom(i) { this._config = Object.assign({}, this._config, { rooms: this._config.rooms.filter((_, j) => j !== i) }); this._emit(); this._rebuild(); }
+  _applyHass() { if (this._hass && this._pickers) this._pickers.forEach((el) => { try { el.hass = this._hass; } catch (e) {} }); }
+  _btn(label, cb) {
+    const b = document.createElement("button"); b.textContent = label;
+    b.style.cssText = "padding:8px 14px;border-radius:8px;border:1px solid var(--divider-color,rgba(127,127,127,.4));background:var(--secondary-background-color,rgba(127,127,127,.12));color:var(--primary-text-color,inherit);font:inherit;cursor:pointer;";
+    b.addEventListener("click", cb); return b;
+  }
+  _text(label, value, onInput, type) {
+    const el = document.createElement("ha-textfield");
+    el.label = label; el.value = value == null ? "" : String(value); if (type) el.type = type; el.style.width = "100%";
+    el.addEventListener("input", () => onInput(el.value)); return el;
+  }
+  _entity(label, value, onChange) {
+    const el = document.createElement("ha-entity-picker");
+    el.label = label; el.value = value || ""; el.allowCustomEntity = true;
+    try { el.includeDomains = ["media_player"]; } catch (e) {}
+    if (this._hass) try { el.hass = this._hass; } catch (e) {}
+    el.addEventListener("value-changed", (e) => onChange(e.detail.value)); this._pickers.push(el); return el;
+  }
+  _iconPicker(label, value, onChange) {
+    const el = document.createElement("ha-icon-picker");
+    el.label = label; el.value = value || "";
+    if (this._hass) try { el.hass = this._hass; } catch (e) {}
+    el.addEventListener("value-changed", (e) => onChange(e.detail.value)); this._pickers.push(el); return el;
+  }
+  _roomCard(room, i) {
+    const box = document.createElement("div");
+    box.style.cssText = "border:1px solid var(--divider-color,rgba(127,127,127,.3));border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;";
+    const head = document.createElement("div"); head.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:8px;";
+    const title = document.createElement("span"); title.textContent = room.name || room.entity || `Room ${i + 1}`; title.style.fontWeight = "600";
+    head.appendChild(title); head.appendChild(this._btn("Remove", () => this._removeRoom(i))); box.appendChild(head);
+    box.appendChild(this._text("Name", room.name, (v) => this._setRoom(i, "name", v)));
+    box.appendChild(this._entity("Sonos speaker (media_player)", room.entity, (v) => this._setRoom(i, "entity", v)));
+    box.appendChild(this._entity("Music Assistant player (mass_*)", room.mass_entity, (v) => this._setRoom(i, "mass_entity", v)));
+    box.appendChild(this._text("Default volume %", room.default_volume == null ? "" : room.default_volume, (v) => this._setRoom(i, "default_volume", v === "" ? undefined : Number(v)), "number"));
+    box.appendChild(this._iconPicker("Icon", room.icon, (v) => this._setRoom(i, "icon", v)));
+    return box;
+  }
+  _rebuild() {
+    if (!this._config) return;
+    this._pickers = []; this.innerHTML = "";
+    const root = document.createElement("div"); root.style.cssText = "display:flex;flex-direction:column;gap:14px;padding:8px 0;";
+    root.appendChild(this._entity("Default room (focused on load)", this._config.default_room, (v) => this._setTop("default_room", v)));
+    this._config.rooms.forEach((room, i) => root.appendChild(this._roomCard(room, i)));
+    root.appendChild(this._btn("+ Add room", () => this._addRoom()));
+    this.appendChild(root); this._applyHass();
+  }
+}
+if (!customElements.get("sonos-music-card-editor")) customElements.define("sonos-music-card-editor", SonosMusicCardEditor);
 
 if (!customElements.get("sonos-music-card")) {
   customElements.define("sonos-music-card", SonosMusicCard);
