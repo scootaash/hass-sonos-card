@@ -1,7 +1,7 @@
-/* TVHGC multi-room music player card (Immersive) for Home Assistant.
+/* Sonos Music Card — multi-room music player (Immersive) for Home Assistant.
    Live native Sonos grouping (group_members + join/unjoin), helper-free. */
 const TEAL = "linear-gradient(155deg,#0c4a5a 0%,#0a3140 52%,#06222e 100%)";
-const VERSION = "0.3.0";
+const VERSION = "0.4.0";
 const ICON = {
   prev: '<polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line>',
   next: '<polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line>',
@@ -32,10 +32,10 @@ const pauseIco = '<svg width="30" height="30" viewBox="0 0 24 24" fill="currentC
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const fmt = (s) => { s = Math.max(0, Math.round(s || 0)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); };
 
-class TvhgcMusicCard extends HTMLElement {
+class SonosMusicCard extends HTMLElement {
   setConfig(config) {
     if (!config || !Array.isArray(config.rooms) || !config.rooms.length)
-      throw new Error("fraser-music-card: `rooms` must be a non-empty list, each with at least an `entity` (the Sonos media_player.*). See the README for an example.");
+      throw new Error("sonos-music-card: `rooms` must be a non-empty list, each with at least an `entity` (the Sonos media_player.*). See the README for an example.");
     this._cfg = config;
     this._rooms = config.rooms.map((r) => ({
       name: r.name || r.entity,
@@ -44,7 +44,7 @@ class TvhgcMusicCard extends HTMLElement {
       def: r.default_volume != null ? r.default_volume : 40,
     }));
     const noEntity = this._rooms.find((r) => !r.entity);
-    if (noEntity) throw new Error("fraser-music-card: every room needs an `entity` (its Sonos media_player.*); add it to: " + JSON.stringify(noEntity.name || "(unnamed room)"));
+    if (noEntity) throw new Error("sonos-music-card: every room needs an `entity` (its Sonos media_player.*); add it to: " + JSON.stringify(noEntity.name || "(unnamed room)"));
     // Action buttons — generic list; legacy `audiobook:` maps to a single action.
     const ab = config.audiobook;
     const actionsCfg = config.actions || (ab ? {
@@ -67,7 +67,7 @@ class TvhgcMusicCard extends HTMLElement {
     this._playlists = this._playlistItems.slice();
     this._playlistMsg = (this._playlistsConfigured && !this._playlistItems.length) ? "Loading playlists…" : null;
     this._browsed = false;
-    this._focusKey = "fmc-focus:" + this._rooms[0].entity;
+    this._focusKey = "smc-focus:" + this._rooms[0].entity;
     this._cfgDefaultFocus = config.default_room || null;
     this._focusEntity = null;
     this._localGroup = {};
@@ -112,12 +112,12 @@ class TvhgcMusicCard extends HTMLElement {
   // Render error boundary — never leave a blank card; show why + how to fix.
   _renderError(err) {
     this._errored = true; this._lastError = err;
-    try { console.error("fraser-music-card:", err); } catch (e) {}
+    try { console.error("sonos-music-card:", err); } catch (e) {}
     const root = this.shadowRoot || (this.attachShadow ? this.attachShadow({ mode: "open" }) : this);
     const msg = esc(err && err.message ? err.message : String(err));
     try {
       root.innerHTML = `<div style="font-family:'DM Sans',system-ui,sans-serif;background:linear-gradient(155deg,#3a1320,#2a0e18);color:#fff;border:1px solid #a83a52;border-radius:16px;padding:20px 22px;line-height:1.45;">
-        <div style="font-weight:700;font-size:15px;margin-bottom:8px">Fraser Music Card couldn't render</div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:8px">Sonos Music Card couldn't render</div>
         <div style="font-size:13px;white-space:pre-wrap;color:#ffd9e0">${msg}</div>
         <div style="font-size:12px;margin-top:10px;color:rgba(255,255,255,.7)">If you just changed the config or updated the card, hard-refresh to clear the cached version (Ctrl/Cmd-Shift-R) and check Settings → Dashboards → Resources has a single, up-to-date entry. Loaded card version: v${VERSION}.</div>
       </div>`;
@@ -434,7 +434,7 @@ class TvhgcMusicCard extends HTMLElement {
   _browseTarget() {
     return this._playlistBrowseEntity || (this._rooms.find((r) => r.massEntity) || {}).massEntity || null;
   }
-  _log(...a) { try { console.info("fraser-music-card:", ...a); } catch (e) {} }
+  _log(...a) { try { console.info("sonos-music-card:", ...a); } catch (e) {} }
   _toItem(c) { return { name: c.title, media_id: c.media_content_id, media_type: c.media_content_type || "playlist", image: c.thumbnail || null }; }
   _browseChildren(entity_id, id, type) {
     const msg = { type: "media_player/browse_media", entity_id };
@@ -465,7 +465,7 @@ class TvhgcMusicCard extends HTMLElement {
       else this._playlistMsg = `No playlists found${this._playlistSource ? ` at ${this._playlistSource}` : ""}. Open HA → Media on ${ent} to find the id (details in the browser console).`;
       this._renderTiles();
     } catch (e) {
-      console.warn("fraser-music-card: playlist browse failed —", e && e.message ? e.message : e);
+      console.warn("sonos-music-card: playlist browse failed —", e && e.message ? e.message : e);
       this._playlistMsg = "Couldn't load playlists: " + (e && e.message ? e.message : e);
       this._renderTiles();
     }
@@ -669,9 +669,9 @@ class TvhgcMusicCard extends HTMLElement {
   }
 }
 
-if (!customElements.get("fraser-music-card")) {
-  customElements.define("fraser-music-card", TvhgcMusicCard);
-  try { console.info(`%c fraser-music-card %c v${VERSION} `, "background:#18b2c4;color:#06303d;border-radius:3px 0 0 3px;font-weight:700", "background:#0a2f3c;color:#7fe9ef;border-radius:0 3px 3px 0"); } catch (e) {}
+if (!customElements.get("sonos-music-card")) {
+  customElements.define("sonos-music-card", SonosMusicCard);
+  try { console.info(`%c sonos-music-card %c v${VERSION} `, "background:#18b2c4;color:#06303d;border-radius:3px 0 0 3px;font-weight:700", "background:#0a2f3c;color:#7fe9ef;border-radius:0 3px 3px 0"); } catch (e) {}
 }
 window.customCards = window.customCards || [];
-window.customCards.push({ type: "fraser-music-card", name: "Fraser Music Player", description: "Immersive multi-room music player", preview: false });
+window.customCards.push({ type: "sonos-music-card", name: "Sonos Music Card", description: "Immersive multi-room Sonos + Music Assistant player", preview: false });

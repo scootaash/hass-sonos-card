@@ -1,4 +1,4 @@
-# fraser-music-card
+# sonos-music-card
 
 An immersive multi-room music player **custom Lovelace card** for Home Assistant, built for a
 Sonos + Music Assistant household and a wall-mounted tablet (1280×800), responsive down to
@@ -14,13 +14,13 @@ calls existing services (`media_player.*`, `music_assistant.play_media`).
 
 ### Via HACS (recommended)
 1. HACS → ⋮ → **Custom repositories** → add `scootaash/hass-sonos-card`, category **Dashboard**.
-2. Install **Fraser Music Card** from HACS (it downloads the JS and registers the resource).
+2. Install **Sonos Music Card** from HACS (it downloads the JS and registers the resource).
 3. Add the card to a dashboard (step 3 below). Hard-refresh after updates.
 
 ### Manual
-1. Copy `fraser-music-card.js` into your HA `/config/www/` folder.
+1. Copy `sonos-music-card.js` into your HA `/config/www/` folder.
 2. Add a dashboard resource: **Settings → Dashboards → ⋮ → Resources → Add**
-   - URL: `/local/fraser-music-card.js`
+   - URL: `/local/sonos-music-card.js`
    - Type: **JavaScript Module**
 
 ### Then (either method)
@@ -34,7 +34,7 @@ calls existing services (`media_player.*`, `music_assistant.play_media`).
 ```
 npm install      # only needed if you want to minify
 npm test         # node DOM-stub smoke test — must report "errors: 0"
-npm run minify   # optional: dist/fraser-music-card.min.js
+npm run minify   # optional: dist/sonos-music-card.min.js
 ```
 There's no headless browser here, so the smoke test validates logic, not pixels — verify the
 look on a real device.

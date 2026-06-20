@@ -6,7 +6,7 @@ and `design/Music Player.dc.html` first.
 ---
 
 ## Context
-`fraser-music-card.js` is a working Home Assistant custom Lovelace card (an immersive
+`sonos-music-card.js` is a working Home Assistant custom Lovelace card (an immersive
 multi-room music player for Sonos + Music Assistant). It currently drives speaker grouping
 through six `input_boolean.sonos_group_*` helpers, which are unwieldy and — critically — do
 **not** reflect grouping changes made in other apps (e.g. the Sonos app). The card already
@@ -47,8 +47,8 @@ existing group (just change which group the card is centred on). Confirm (a) vs 
 out and make it the new playback room" with the user before implementing.
 
 ### 4. Deployment
-Ship as a file (no inline 24 KB limit). Deploy `fraser-music-card.js` to `/config/www/` and
-register `url: /local/fraser-music-card.js`. Do NOT reintroduce the inline-resource minify
+Ship as a file (no inline 24 KB limit). Deploy `sonos-music-card.js` to `/config/www/` and
+register `url: /local/sonos-music-card.js`. Do NOT reintroduce the inline-resource minify
 squeeze. (You may keep an optional `npm run minify` for a smaller `dist/`, but the readable
 source is the deployable.)
 
@@ -57,7 +57,7 @@ source is the deployable.)
   (colours, DM Sans, spacing, radii, the popover).
 - Must remain responsive (1280×800 tablet → phone).
 - Preserve optimistic-then-reconcile behaviour so external (Sonos/MA app) changes flow in.
-- You can't see it render — run `node test/smoke-test.js fraser-music-card.js` and require
+- You can't see it render — run `node test/smoke-test.js sonos-music-card.js` and require
   `errors: 0`; update the smoke test's stub `hass` to include grouped `group_members` so the
   new topology logic is exercised. Then hand off to the user for on-device verification.
 - Update `CLAUDE.md` (remove the "migration in progress" note once done) and the config

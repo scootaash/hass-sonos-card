@@ -1,4 +1,4 @@
-# CLAUDE.md — fraser-music-card
+# CLAUDE.md — sonos-music-card
 
 Guidance for Claude Code working in this repo.
 
@@ -11,7 +11,7 @@ smell — the data (`group_members`, `media_*`, `volume_level`) and actions
 (`media_player.join`/`unjoin`/`volume_set`, `music_assistant.play_media`) already exist.
 
 - **One self-contained vanilla ES module.** No framework, no imports, no build required.
-  HA loads `fraser-music-card.js` directly as a JS module. (Lit/TS would add a build
+  HA loads `sonos-music-card.js` directly as a JS module. (Lit/TS would add a build
   pipeline for no real benefit — don't introduce one.)
 - Shadow DOM for style isolation. No external runtime dependencies.
 - Target: a wall-mounted tablet at **1280×800 landscape**, but must stay **responsive**
@@ -72,7 +72,7 @@ Rooms (name → Sonos entity → MA entity → default volume %):
 
 ## Config (YAML) the card accepts
 ```yaml
-type: custom:fraser-music-card
+type: custom:sonos-music-card
 default_room: media_player.lounge          # optional: which group is focused on first load (localStorage wins after)
 rooms:
   - { name: Lounge, entity: media_player.lounge, mass_entity: media_player.mass_lounge, default_volume: 29 }
@@ -105,10 +105,10 @@ player — the path it shows is the browse id.
 
 ## Deploy
 This is a file-hosted card (we deliberately moved off the 24 KB inline-resource route):
-1. Copy `fraser-music-card.js` to Home Assistant's `/config/www/`.
+1. Copy `sonos-music-card.js` to Home Assistant's `/config/www/`.
 2. Register the resource once: Settings → Dashboards → ⋮ → Resources → Add
-   `url: /local/fraser-music-card.js`, type **JavaScript Module**. (Or via the API /
-   `ha_config_set_dashboard_resource(url="/local/fraser-music-card.js")`.)
+   `url: /local/sonos-music-card.js`, type **JavaScript Module**. (Or via the API /
+   `ha_config_set_dashboard_resource(url="/local/sonos-music-card.js")`.)
 3. Add the card to a dashboard (a full-width `panel` view works well).
 4. **Hard-refresh** after every change (resources are cached): browser Ctrl/Cmd-Shift-R;
    wall tablet → restart Fully Kiosk; phone Companion app → reset frontend cache.
@@ -120,7 +120,7 @@ as a CSS resource (document-level fonts are usable inside shadow DOM).
 There is no browser available in CI / the agent sandbox, so we **cannot visually verify**.
 Build defensively (guard missing entities/attributes) and run the DOM-stub smoke test:
 ```
-node test/smoke-test.js fraser-music-card.js
+node test/smoke-test.js sonos-music-card.js
 ```
 It instantiates the card with a stubbed DOM + a realistic `hass`, renders, and fires every
 wired event handler. **Acceptance: `errors: 0`.** Always run it (and run it against the
