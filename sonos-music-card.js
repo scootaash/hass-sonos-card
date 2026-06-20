@@ -1,13 +1,14 @@
 /* Sonos Music Card — multi-room music player (Immersive) for Home Assistant.
    Live native Sonos grouping (group_members + join/unjoin), helper-free. */
 const TEAL = "linear-gradient(155deg,#0c4a5a 0%,#0a3140 52%,#06222e 100%)";
-const VERSION = "0.4.0";
+const VERSION = "0.4.1";
 const ICON = {
   prev: '<polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line>',
   next: '<polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line>',
   check: '<polyline points="20 6 9 17 4 12"></polyline>',
   plus: '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>',
   move: '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line>',
+  exit: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line>',
   split: '<polyline points="15 14 20 9 15 4"></polyline><path d="M4 20v-7a4 4 0 0 1 4-4h12"></path>',
   reset: '<path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.4 2.6L3 8"></path><path d="M3 3v5h5"></path>',
   vol: '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>',
@@ -240,15 +241,12 @@ class SonosMusicCard extends HTMLElement {
 .gtext{display:flex;flex-direction:column;gap:2px;min-width:0;}
 .gn{font:600 15px/1.2 'DM Sans';color:rgba(255,255,255,.92);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .gs{font:500 11px/1 'DM Sans';letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;color:rgba(255,255,255,.45);}
-.grow.grp{background:rgba(0,204,204,.07);border-color:rgba(0,204,204,.28);} .grow.grp .gs{color:#7fe9ef;}
-.grow.master{border-color:rgba(24,178,196,.5);} .grow.master .gs{color:#7fe9ef;}
-.grow.avail{background:rgba(0,204,204,.15);border-color:rgba(0,204,204,.55);} .grow.avail .gn{color:#fff;} .grow.avail .gs{color:#8ff0f5;}
-.grow.other{background:rgba(232,145,58,.06);border-color:rgba(232,145,58,.38);} .grow.other .gs{color:#f3c18a;}
+.grow.grp{background:rgba(0,102,255,.14);border-color:rgba(0,102,255,.5);} .grow.grp .gs{color:#9cc0ff;}
+.grow.master{background:rgba(0,204,204,.16);border-color:rgba(0,204,204,.55);box-shadow:inset 0 0 0 2px #18b2c4;} .grow.master .gs{color:#7fe9ef;}
 .gtog{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:none;border-radius:99px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);cursor:pointer;flex:none;}
-.grow.grp .gtog{background:rgba(0,204,204,.55);color:#06303d;}
+.grow.grp .gtog{background:#0066FF;color:#fff;}
 .grow.master .gtog{background:#18b2c4;color:#06303d;}
-.grow.avail .gtog{background:#18b2c4;color:#06303d;box-shadow:0 0 0 4px rgba(24,178,196,.22);}
-.grow.other .gtog{background:#e8913a;color:#3a1e06;}
+.gtog.move{background:rgba(232,145,58,.2);color:#f3c18a;box-shadow:inset 0 0 0 1px rgba(232,145,58,.5);}
 .volrow{position:relative;display:flex;align-items:center;gap:16px;padding:16px 20px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);}
 .slider{position:relative;height:20px;display:flex;align-items:center;cursor:pointer;touch-action:none;flex:1;}
 .slider .strack{position:relative;width:100%;height:6px;border-radius:99px;background:rgba(255,255,255,.2);}
@@ -568,15 +566,14 @@ class SonosMusicCard extends HTMLElement {
     this._rooms.forEach((r, i) => {
       const el = this.$.grows[i]; const inSel = members.has(r.entity); const isCoord = r.entity === coordE;
       const elsewhere = !inSel && this._groupMembersOf(r).length > 1;
-      el.classList.toggle("master", isCoord);
-      el.classList.toggle("grp", inSel && !isCoord);
-      el.classList.toggle("avail", !inSel && !elsewhere);
-      el.classList.toggle("other", elsewhere);
-      el.style.background = isCoord && this._pillColor ? this._pillColor : "";
+      el.classList.toggle("master", isCoord);            // highlighted current style
+      el.classList.toggle("grp", inSel && !isCoord);     // blue = in the group
+      // not in the group → default grey row; the move button alone flags "in another group"
       const sub = el.querySelector(".gs"); const tog = el.querySelector(".gtog");
+      tog.classList.toggle("move", elsewhere);
       if (isCoord) { sub.textContent = playing ? "Master · playing" : "Master"; tog.innerHTML = svg(ICON.check, 18, 3); }
       else if (inSel) { sub.textContent = "In group"; tog.innerHTML = svg(ICON.check, 18, 3); }
-      else if (elsewhere) { const c = this._roomByEntity(this._groupMembersOf(r)[0]); sub.textContent = "Move from " + (c ? c.name : this._friendly(this._groupMembersOf(r)[0])); tog.innerHTML = svg(ICON.move, 18, 2.2); }
+      else if (elsewhere) { const c = this._roomByEntity(this._groupMembersOf(r)[0]); sub.textContent = "Move from " + (c ? c.name : this._friendly(this._groupMembersOf(r)[0])); tog.innerHTML = svg(ICON.exit, 18, 2.2); }
       else { sub.textContent = "Available"; tog.innerHTML = svg(ICON.plus, 18, 2.4); }
     });
     // split button — make the focused speaker its own group (when it's grouped)
