@@ -91,9 +91,13 @@ The **colour theme** is configurable (`theme:`, default `ha`): `ha` adopts Home 
 surfaces — the card background becomes `--ha-card-background`/`--card-background-color` (translucent
 themes like frosted-glass show through, plus a `backdrop-filter` blur), text uses
 `--primary-text-color`, and the chrome surfaces/borders are tinted from `--rgb-primary-text-color`
-via the `--smc-tint` token (so they adapt to light/dark). The album-art region (cover, scrim,
-now-playing, transport, compact triggers) keeps white-on-dark via a tint reset, since it sits over
-artwork. Accents stay teal for now. `art` is the original wash that recolours from the playing
+via the `--smc-tint` token (so they adapt to light/dark). The **stage overlays** (groups / playlists
+/ shortcuts / volume) are frosted in `ha` too — theme card background + `backdrop-filter` blur — so
+they don't drop a dark island into a light dashboard. **Accents** (rings, slider fill, ✓ checks,
+active triggers) are tokenised (`--smc-accent` / `--smc-accent-rgb` / `--smc-accent-ink`) and map to
+`--primary-color` / `--rgb-primary-color` / `--text-primary-color` in `ha`. The album-art region
+(cover, scrim, now-playing, transport, compact triggers) keeps white-on-dark via a tint reset, since
+it sits over artwork (and the `.mpct` % stays dark — it's on the white knob). `art` is the original wash that recolours from the playing
 artwork; `home` is the fixed teal. `art`/`home` are unchanged because `--smc-tint` defaults to
 `255,255,255`. The editor has a Theme dropdown.
 ```yaml
@@ -124,7 +128,7 @@ playlists:
   title: Apple Music playlists             # optional heading
   source: library://playlist               # browse this MA node → one tile per playlist found
   source_type: playlist                    # optional content_type for the browse call
-  dedupe: id                               # drop duplicates MA returns: id (default) | name | false
+  dedupe: name                             # drop duplicates MA returns: name (default) | id | false
   # browse_entity: media_player.mass_lounge  # optional; defaults to the first room with a mass_entity
   # items:                                  # optional: explicit tiles (override auto-browse)
   #   - { name: Chill, media_id: library://playlist/13, media_type: playlist, image: <art-url> }

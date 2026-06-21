@@ -1,7 +1,7 @@
 /* Sonos Music Card — multi-room music player (Immersive) for Home Assistant.
    Live native Sonos grouping (group_members + join/unjoin), helper-free. */
 const TEAL = "linear-gradient(155deg,#0c4a5a 0%,#0a3140 52%,#06222e 100%)";
-const VERSION = "0.12.0";
+const VERSION = "0.13.0";
 const ICON = {
   prev: '<polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line>',
   next: '<polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line>',
@@ -67,7 +67,7 @@ class SonosMusicCard extends HTMLElement {
     this._playlistSource = plCfg.source || null;
     this._playlistSourceType = plCfg.source_type || "playlist";
     this._playlistBrowseEntity = plCfg.browse_entity || null;
-    this._playlistDedupe = plCfg.dedupe === undefined ? "id" : plCfg.dedupe; // "id" (default) | "name" | false
+    this._playlistDedupe = plCfg.dedupe === undefined ? "name" : plCfg.dedupe; // "name" (default) | "id" | false
     this._playlistItems = (plCfg.items || []).map((p) => ({ name: p.name, media_id: p.media_id, media_type: p.media_type || "playlist", image: p.image || null }));
     this._playlists = this._playlistItems.slice();
     this._playlistMsg = (this._playlistsConfigured && !this._playlistItems.length) ? "Loading playlists…" : null;
@@ -223,19 +223,21 @@ class SonosMusicCard extends HTMLElement {
     const panelHasContent = panelActions || (!cp && this._playlistsConfigured);
 
     root.innerHTML = `<style>
-:host{display:block;--smc-tint:255,255,255;}
+:host{display:block;--smc-tint:255,255,255;--smc-accent:var(--smc-accent);--smc-accent-rgb:0,204,204;--smc-accent-ink:var(--smc-accent-ink);}
 *{box-sizing:border-box;}
 @keyframes eq{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}
 .root{position:relative;width:100%;max-width:1280px;margin:0 auto;border-radius:20px;overflow:hidden;background:${TEAL};font-family:'DM Sans',system-ui,sans-serif;color:#fff;}
 .wash{position:absolute;inset:0;background:${TEAL};transition:opacity .3s;z-index:0;}
 .blob{position:absolute;border-radius:99px;filter:blur(20px);z-index:0;}
-.b1{top:-160px;left:-120px;width:620px;height:620px;background:radial-gradient(circle,rgba(24,178,196,.45),transparent 65%);}
+.b1{top:-160px;left:-120px;width:620px;height:620px;background:radial-gradient(circle,rgba(var(--smc-accent-rgb),.45),transparent 65%);}
 .b2{bottom:-200px;right:120px;width:560px;height:560px;background:radial-gradient(circle,rgba(13,90,110,.6),transparent 65%);}
 /* theme: ha — adopt the Home Assistant theme's card surface + text, and tint the
    chrome from the theme text colour (so it matches frosted-glass / any HA theme). */
-.root.theme-ha{background:var(--ha-card-background,var(--card-background-color,${TEAL}));color:var(--primary-text-color,#fff);--smc-tint:var(--rgb-primary-text-color,255,255,255);backdrop-filter:blur(16px) saturate(1.25);-webkit-backdrop-filter:blur(16px) saturate(1.25);}
+.root.theme-ha{background:var(--ha-card-background,var(--card-background-color,${TEAL}));color:var(--primary-text-color,#fff);--smc-tint:var(--rgb-primary-text-color,255,255,255);--smc-accent:var(--primary-color,var(--smc-accent));--smc-accent-rgb:var(--rgb-primary-color,0,204,204);--smc-accent-ink:var(--text-primary-color,var(--smc-accent-ink));backdrop-filter:blur(16px) saturate(1.25);-webkit-backdrop-filter:blur(16px) saturate(1.25);}
 .root.theme-ha .wash,.root.theme-ha .blob{display:none;}
 .root.theme-ha .scrim,.root.theme-ha .topstrip{--smc-tint:255,255,255;}
+.root.theme-ha .stageovl{background:var(--ha-card-background,var(--card-background-color,#0c4a5a));backdrop-filter:blur(18px) saturate(1.25);-webkit-backdrop-filter:blur(18px) saturate(1.25);}
+.root.theme-ha .abtn{background:rgba(var(--smc-tint),.08);border-color:rgba(var(--smc-tint),.18);}
 .wrap{position:relative;z-index:1;display:flex;gap:36px;padding:40px;}
 .left{flex:1;display:flex;flex-direction:column;gap:22px;min-width:0;}
 .ovl{font:700 11px/1.2 'DM Sans';letter-spacing:.16em;text-transform:uppercase;color:rgba(var(--smc-tint),.55);}
@@ -249,8 +251,8 @@ class SonosMusicCard extends HTMLElement {
 .pill.playing-bg .pbg{display:flex;}
 .pill.playing-bg>svg,.pill.playing-bg>ha-icon,.pill.playing-bg .dot,.pill.playing-bg .pn{opacity:.32;}
 .pill .dot{width:7px;height:7px;border-radius:99px;background:rgba(var(--smc-tint),.3);}
-.pill.current{background:rgba(0,204,204,.16);border-color:rgba(0,204,204,.55);color:#fff;box-shadow:inset 0 0 0 2px #18b2c4;}
-.pill.current .dot{background:#eafdff;box-shadow:0 0 0 3px rgba(24,178,196,.55);}
+.pill.current{background:rgba(var(--smc-accent-rgb),.16);border-color:rgba(var(--smc-accent-rgb),.55);color:#fff;box-shadow:inset 0 0 0 2px var(--smc-accent);}
+.pill.current .dot{background:var(--smc-accent);box-shadow:0 0 0 3px rgba(var(--smc-accent-rgb),.55);}
 .pill.follower{opacity:.55;background:rgba(var(--smc-tint),.04);border-color:rgba(var(--smc-tint),.1);color:rgba(var(--smc-tint),.6);}
 .pill.follower:hover{opacity:.85;}
 .pill.follower .dot{background:rgba(var(--smc-tint),.25);}
@@ -263,13 +265,13 @@ class SonosMusicCard extends HTMLElement {
 .topstrip{position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:14px 14px 30px;pointer-events:none;background:linear-gradient(to bottom,rgba(4,22,30,.82),rgba(4,22,30,.34) 52%,transparent);}
 .gstrip{pointer-events:auto;display:flex;align-items:center;gap:7px;cursor:pointer;padding:6px 9px;border-radius:99px;background:rgba(4,22,30,.32);backdrop-filter:blur(9px) saturate(1.4);-webkit-backdrop-filter:blur(9px) saturate(1.4);box-shadow:inset 0 0 0 1px rgba(var(--smc-tint),.14);}
 .gstrip:empty{display:none;}
-.gstrip.active{background:rgba(24,178,196,.5);box-shadow:inset 0 0 0 2px rgba(24,178,196,.9);}
+.gstrip.active{background:rgba(var(--smc-accent-rgb),.5);box-shadow:inset 0 0 0 2px rgba(var(--smc-accent-rgb),.9);}
 .gsi{width:40px;height:40px;border-radius:50%;background:rgba(var(--smc-tint),.2);display:inline-flex;align-items:center;justify-content:center;color:#fff;font:700 15px/1 'DM Sans';}
 .gsi ha-icon{--mdc-icon-size:22px;}
 .trigs{pointer-events:auto;display:flex;align-items:center;gap:8px;flex:none;}
 .pltrig,.actrig{pointer-events:auto;width:49px;height:49px;border-radius:50%;border:none;background:rgba(4,22,30,.42);color:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(9px) saturate(1.4);-webkit-backdrop-filter:blur(9px) saturate(1.4);box-shadow:inset 0 0 0 1px rgba(var(--smc-tint),.16);transition:background .18s;}
-.pltrig:hover,.actrig:hover{background:rgba(24,178,196,.32);}
-.pltrig.active,.actrig.active{background:#18b2c4;color:#06303d;box-shadow:inset 0 0 0 1px rgba(var(--smc-tint),.3);}
+.pltrig:hover,.actrig:hover{background:rgba(var(--smc-accent-rgb),.32);}
+.pltrig.active,.actrig.active{background:var(--smc-accent);color:var(--smc-accent-ink);box-shadow:inset 0 0 0 1px rgba(var(--smc-tint),.3);}
 .stageovl{position:absolute;inset:0;z-index:4;background:linear-gradient(150deg,#0c4a5a,#06222e);padding:18px 16px 16px;display:flex;flex-direction:column;gap:10px;opacity:0;visibility:hidden;transform:translateY(12px);transition:opacity .28s ease,transform .28s ease,visibility .28s;overflow:auto;}
 .art.has-strip .stageovl{padding-top:72px;}
 .art.s-groups .gstage,.art.s-playlists .plstage,.art.s-actions .actstage,.art.s-volume .vstage{opacity:1;visibility:visible;transform:none;}
@@ -300,7 +302,7 @@ class SonosMusicCard extends HTMLElement {
 .ghbtns{display:flex;gap:8px;flex-wrap:wrap;}
 .splitbtn,.addall{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;border:1px solid rgba(var(--smc-tint),.22);background:rgba(var(--smc-tint),.08);color:rgba(var(--smc-tint),.85);font:600 11px/1.1 'DM Sans';cursor:pointer;}
 .splitbtn:hover,.addall:hover{background:rgba(var(--smc-tint),.14);}
-.addall{border-color:rgba(0,204,204,.45);color:#bdeef2;}
+.addall{border-color:rgba(var(--smc-accent-rgb),.45);color:var(--smc-accent);}
 .glist{flex:1;display:flex;flex-direction:column;gap:9px;}
 .grow{display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:14px;background:rgba(var(--smc-tint),.06);border:1px solid rgba(var(--smc-tint),.13);cursor:pointer;}
 .gicon{display:inline-flex;align-items:center;justify-content:center;width:26px;flex:none;color:rgba(var(--smc-tint),.85);}
@@ -308,11 +310,11 @@ class SonosMusicCard extends HTMLElement {
 .gtext{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;}
 .gn{font:600 15px/1.2 'DM Sans';color:rgba(var(--smc-tint),.92);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .gs{font:500 11px/1 'DM Sans';letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;color:rgba(var(--smc-tint),.45);}
-.grow.grp{background:rgba(0,204,204,.1);border-color:rgba(0,204,204,.4);} .grow.grp .gs{color:#7fe9ef;}
-.grow.master{background:rgba(0,204,204,.16);border-color:rgba(0,204,204,.55);box-shadow:inset 0 0 0 2px #18b2c4;} .grow.master .gs{color:#7fe9ef;}
+.grow.grp{background:rgba(var(--smc-accent-rgb),.1);border-color:rgba(var(--smc-accent-rgb),.4);} .grow.grp .gs{color:var(--smc-accent);}
+.grow.master{background:rgba(var(--smc-accent-rgb),.16);border-color:rgba(var(--smc-accent-rgb),.55);box-shadow:inset 0 0 0 2px var(--smc-accent);} .grow.master .gs{color:var(--smc-accent);}
 .gtog{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:none;border-radius:99px;background:rgba(var(--smc-tint),.1);color:rgba(var(--smc-tint),.85);cursor:pointer;flex:none;}
-.grow.grp .gtog{background:#00CCCC;color:#06303d;}
-.grow.master .gtog{background:#18b2c4;color:#06303d;}
+.grow.grp .gtog{background:var(--smc-accent);color:var(--smc-accent-ink);}
+.grow.master .gtog{background:var(--smc-accent);color:var(--smc-accent-ink);}
 .gtog.move{background:rgba(232,145,58,.2);color:#f3c18a;box-shadow:inset 0 0 0 1px rgba(232,145,58,.5);}
 .volrow{position:relative;display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:16px;background:rgba(var(--smc-tint),.07);border:1px solid rgba(var(--smc-tint),.13);}
 .vic{display:inline-flex;align-items:center;color:rgba(var(--smc-tint),.8);flex:none;}
@@ -321,26 +323,26 @@ class SonosMusicCard extends HTMLElement {
 .vstep:hover{background:rgba(var(--smc-tint),.14);}
 .vbtn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;border:1px solid rgba(var(--smc-tint),.18);background:rgba(var(--smc-tint),.08);color:#fff;cursor:pointer;flex:none;}
 .vbtn:hover{background:rgba(var(--smc-tint),.16);}
-.vbtn.act{background:#18b2c4;color:#06303d;border-color:transparent;}
+.vbtn.act{background:var(--smc-accent);color:var(--smc-accent-ink);border-color:transparent;}
 .mpct{font:700 9.5px/1 'DM Sans';color:#06303d;pointer-events:none;}
-.vbtn.drop.active{background:#18b2c4;color:#06303d;border-color:transparent;}
+.vbtn.drop.active{background:var(--smc-accent);color:var(--smc-accent-ink);border-color:transparent;}
 .vbtn.drop.active svg{transform:rotate(180deg);}
 .slider{position:relative;height:42px;display:flex;align-items:center;cursor:pointer;touch-action:none;flex:1;min-width:50px;}
 .slider .strack{position:relative;width:100%;height:8px;border-radius:99px;background:rgba(var(--smc-tint),.2);}
-.slider .sfill{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,#0c6678,#18b2c4);width:0;}
+.slider .sfill{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:var(--smc-accent);width:0;}
 .slider .sknob{position:absolute;top:50%;width:20px;height:20px;border-radius:99px;background:#fff;transform:translate(-50%,-50%);left:0;display:flex;align-items:center;justify-content:center;}
 .slider.master .sknob{width:34px;height:34px;box-shadow:0 2px 6px rgba(0,0,0,.35);}
 .prhead{display:flex;align-items:center;justify-content:space-between;}
-.popcnt{font:600 12px/1 'DM Sans';color:#7fe9ef;}
-.prn{font:600 14px/1 'DM Sans';color:#fff;}
+.popcnt{font:600 12px/1 'DM Sans';color:var(--smc-accent);}
+.prn{font:600 14px/1 'DM Sans';color:rgba(var(--smc-tint),.95);}
 .prr{display:flex;align-items:center;gap:8px;}
 .prdef{display:inline-flex;align-items:center;justify-content:center;padding:6px 8px;border-radius:99px;background:rgba(var(--smc-tint),.08);border:1px solid rgba(var(--smc-tint),.2);color:rgba(var(--smc-tint),.82);cursor:pointer;}
-.prpct{font:700 12px/1 'DM Sans';color:#7fe9ef;min-width:34px;text-align:right;}
+.prpct{font:700 12px/1 'DM Sans';color:var(--smc-accent);min-width:34px;text-align:right;}
 .prslide{display:flex;align-items:center;gap:10px;margin-top:8px;}
-.sm .strack{background:rgba(var(--smc-tint),.15);} .sm .sfill{background:#18b2c4;}
+.sm .strack{background:rgba(var(--smc-tint),.15);} .sm .sfill{background:var(--smc-accent);}
 .panel{flex:none;width:386px;display:flex;flex-direction:column;gap:16px;padding:24px;border-radius:20px;background:rgba(var(--smc-tint),.07);border:1px solid rgba(var(--smc-tint),.14);}
 .actions{display:flex;flex-direction:column;gap:10px;}
-.abtn{display:flex;align-items:center;gap:14px;padding:16px;border-radius:16px;border:1px solid rgba(0,102,255,.5);background:linear-gradient(135deg,rgba(0,102,255,.28),rgba(0,204,204,.2));color:#fff;cursor:pointer;text-align:left;width:100%;transition:transform .09s ease,filter .12s ease;}
+.abtn{display:flex;align-items:center;gap:14px;padding:16px;border-radius:16px;border:1px solid rgba(0,102,255,.5);background:linear-gradient(135deg,rgba(0,102,255,.28),rgba(var(--smc-accent-rgb),.2));color:#fff;cursor:pointer;text-align:left;width:100%;transition:transform .09s ease,filter .12s ease;}
 .abtn:active{transform:scale(.97);filter:brightness(1.1);}
 .abic{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:rgba(var(--smc-tint),.16);flex:none;}
 .abic ha-icon{--mdc-icon-size:22px;}
@@ -362,8 +364,8 @@ class SonosMusicCard extends HTMLElement {
 .root.stack .art.has-strip .stageovl{padding-top:64px;}
 /* On stacked layouts, let an open stage grow the card so the popup is the single
    scroll — rather than scrolling inside the album-art square. */
-.root.stack .art.s-groups,.root.stack .art.s-playlists,.root.stack .art.s-actions,.root.stack .art.s-volume{height:auto;aspect-ratio:auto;min-height:62vw;}
-.root.stack .art.s-groups .gstage,.root.stack .art.s-playlists .plstage,.root.stack .art.s-actions .actstage,.root.stack .art.s-volume .vstage{position:relative;overflow:visible;}
+.root.stack .art.s-groups,.root.stack .art.s-playlists,.root.stack .art.s-actions,.root.stack .art.s-volume{height:auto;aspect-ratio:auto;}
+.root.stack .art.s-groups .gstage,.root.stack .art.s-playlists .plstage,.root.stack .art.s-actions .actstage,.root.stack .art.s-volume .vstage{position:relative;overflow:visible;min-height:62vw;}
 .root.stack .art.s-playlists .grid,.root.stack .art.s-volume .poprows{overflow:visible;}
 /* Phones: smaller pills/icons and tighter padding (it's framed by the popup anyway). */
 .root.phone{border-radius:14px;}
@@ -844,7 +846,7 @@ class SonosMusicCard extends HTMLElement {
     if (!this.$) return;
     if (!rgb) {
       this.$.wash.style.background = TEAL;
-      this.$.b1.style.background = "radial-gradient(circle,rgba(24,178,196,.45),transparent 65%)";
+      this.$.b1.style.background = "radial-gradient(circle,rgba(var(--smc-accent-rgb),.45),transparent 65%)";
       this.$.b2.style.background = "radial-gradient(circle,rgba(13,90,110,.6),transparent 65%)";
       this._pillColor = null;
     } else {
@@ -970,7 +972,7 @@ class SonosMusicCardEditor extends HTMLElement {
     box.appendChild(this._text("Section title", pl.title, (v) => this._setPlaylist("title", v)));
     box.appendChild(this._text("Source (Music Assistant browse id, e.g. library://playlist)", pl.source, (v) => this._setPlaylist("source", v)));
     box.appendChild(this._text("Source type", pl.source_type, (v) => this._setPlaylist("source_type", v)));
-    box.appendChild(this._select("Remove duplicates", pl.dedupe === undefined ? "id" : String(pl.dedupe), [["id", "Exact duplicates (default)"], ["name", "Same name"], ["false", "Keep all"]], (v) => this._setPlaylist("dedupe", v === "false" ? false : v)));
+    box.appendChild(this._select("Remove duplicates", pl.dedupe === undefined ? "name" : String(pl.dedupe), [["name", "Same name (default)"], ["id", "Exact duplicates only"], ["false", "Keep all"]], (v) => this._setPlaylist("dedupe", v === "false" ? false : v)));
     if (Array.isArray(pl.items) && pl.items.length) { const n = document.createElement("span"); n.textContent = `+ ${pl.items.length} explicit item(s) (edit in YAML)`; n.style.cssText = "font-size:11px;opacity:.6;"; box.appendChild(n); }
     return box;
   }
