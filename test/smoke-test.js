@@ -75,6 +75,10 @@ const hass = {
 };
 const cfg = {
   default_room: "media_player.kitchen",
+  // Exercise all three album-art "stage" overlays (groups / playlists / shortcuts).
+  compact_groups: true,
+  compact_playlists: true,
+  compact_actions: true,
   rooms: [
     { name: "Lounge", entity: "media_player.lounge", mass_entity: "media_player.mass_lounge", icon: "mdi:sofa", default_volume: 29 },
     { name: "Kitchen", entity: "media_player.kitchen", mass_entity: "media_player.mass_kitchen", icon: "mdi:fridge", default_volume: 36 },

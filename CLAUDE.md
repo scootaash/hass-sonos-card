@@ -80,6 +80,7 @@ type: custom:sonos-music-card
 default_room: media_player.lounge          # optional: which group is focused on first load (localStorage wins after)
 compact_groups: false                      # true → grouped-speaker icon strip on the album art; tap swaps to the group builder
 compact_playlists: false                   # true → a playlists icon on the album art; tap swaps to the playlist grid
+compact_actions: false                     # true → a shortcuts icon on the album art; tap swaps to the action buttons
 rooms:
   - { name: Lounge, entity: media_player.lounge, mass_entity: media_player.mass_lounge, icon: mdi:sofa, default_volume: 29 }
   # …one per room (mass_entity is required for playlist/action playback; icon is optional, mdi:*)
