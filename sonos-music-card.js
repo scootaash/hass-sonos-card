@@ -1,7 +1,7 @@
 /* Sonos Music Card — multi-room music player (Immersive) for Home Assistant.
    Live native Sonos grouping (group_members + join/unjoin), helper-free. */
 const TEAL = "linear-gradient(155deg,#0c4a5a 0%,#0a3140 52%,#06222e 100%)";
-const VERSION = "0.10.0";
+const VERSION = "0.11.0";
 const ICON = {
   prev: '<polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line>',
   next: '<polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line>',
@@ -75,7 +75,11 @@ class SonosMusicCard extends HTMLElement {
     this._compactGroups = !!config.compact_groups;   // groups → icon strip on the art, tap to open
     this._compactPlaylists = !!config.compact_playlists; // playlists → icon on the art, tap to open
     this._compactActions = !!config.compact_actions; // shortcuts → icon on the art, tap to open
-    this._stage = "art";                              // album-art "stage": art | groups | playlists | actions
+    // Colour theme: ha = derive from Home Assistant's theme (default); art = recolour
+    // from the playing album art (the original immersive wash); home = fixed teal.
+    const th = (config.theme || "ha").toString().toLowerCase();
+    this._theme = th === "art" || th === "home" ? th : "ha";
+    this._stage = "art";                              // album-art "stage": art | groups | playlists | actions | volume
     this._focusKey = "smc-focus:" + this._rooms[0].entity;
     this._cfgDefaultFocus = config.default_room || null;
     this._focusEntity = null;
@@ -198,6 +202,7 @@ class SonosMusicCard extends HTMLElement {
   _build() {
     this._built = true;
     this._lastStageRender = null;
+    this._lastPic = undefined; this._lastThemeCol = undefined;
     const root = this.attachShadow ? (this.shadowRoot || this.attachShadow({ mode: "open" })) : this;
     const pbg = `<span class="pbg">${svg(ICON.play, 30, 0, "currentColor")}</span>`;
     const pills = this._rooms.map((r, i) =>
@@ -704,9 +709,11 @@ class SonosMusicCard extends HTMLElement {
     const m = this._coordRoom(); const s = this._st(m.entity); const a = (s && s.attributes) || {};
     const grouped = this._grouped();
     const playing = s && s.state === "playing";
-    // wash from art
+    // background wash — themed (HA theme primary), from album art, or fixed teal
     const pic = a.entity_picture || null;
-    this._applyWash(pic);
+    if (this._theme === "art") this._applyWash(pic);
+    else if (this._theme === "home") this._applyWash(null);
+    else this._applyThemeWash();
     // cover
     if (pic) { if (this.$.cover.getAttribute("src") !== pic) this.$.cover.src = pic; this.$.cover.style.display = ""; }
     else this.$.cover.style.display = "none";
@@ -806,6 +813,27 @@ class SonosMusicCard extends HTMLElement {
     });
   }
 
+  // Theme mode: tint the immersive gradient from Home Assistant's --primary-color
+  // (inherits into the shadow DOM), so the card matches the active dashboard theme.
+  _applyThemeWash() {
+    let col = null;
+    try { if (typeof getComputedStyle === "function") col = getComputedStyle(this).getPropertyValue("--primary-color").trim(); } catch (e) {}
+    if (col === this._lastThemeCol) return;
+    this._lastThemeCol = col;
+    this._lastPic = "__theme__";
+    this._setWash(this._parseColor(col));
+  }
+  _parseColor(c) {
+    if (!c) return null;
+    c = String(c).trim();
+    let m = c.match(/^#([0-9a-f]{3})$/i);
+    if (m) return [0, 1, 2].map((i) => parseInt(m[1][i] + m[1][i], 16));
+    m = c.match(/^#([0-9a-f]{6})$/i);
+    if (m) return [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16));
+    m = c.match(/^rgba?\(([^)]+)\)/i);
+    if (m) { const p = m[1].split(",").map((x) => parseFloat(x)); if (p.length >= 3 && p.slice(0, 3).every((n) => !isNaN(n))) return [p[0], p[1], p[2]]; }
+    return null;
+  }
   _applyWash(pic) {
     if (pic === this._lastPic) return;
     this._lastPic = pic;
@@ -1005,6 +1033,7 @@ class SonosMusicCardEditor extends HTMLElement {
     this._pickers = []; this.innerHTML = "";
     const root = document.createElement("div"); root.style.cssText = "display:flex;flex-direction:column;gap:14px;padding:8px 0;";
     root.appendChild(this._entity("Default room (focused on load)", this._config.default_room, (v) => this._setTop("default_room", v)));
+    root.appendChild(this._select("Theme", this._config.theme || "ha", [["ha", "Home Assistant theme"], ["art", "Album artwork (dynamic)"], ["home", "Home teal (fixed)"]], (v) => this._setTop("theme", v === "ha" ? undefined : v)));
     this._config.rooms.forEach((room, i) => root.appendChild(this._roomCard(room, i)));
     root.appendChild(this._btn("+ Add room", () => this._addRoom()));
     root.appendChild(this._actionsCard());
