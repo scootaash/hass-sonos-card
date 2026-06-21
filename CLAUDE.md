@@ -76,10 +76,17 @@ card in a dashboard to get a form for the rooms (entity pickers, default volume,
 the **shortcuts/scripts** (name + a `script.*` picker + icon → writes `actions:`), the playlists,
 `default_room`, and the three compact toggles. It writes the same YAML. When a room has an
 `icon`, its top-nav pill becomes icon-only and the icon shows in the group rows. The pill of the
-**playing** group's coordinator gets a subtle play watermark behind its icon (focus is still the
+**playing** group's coordinator gets a play watermark behind its (faded) icon (focus is still the
 ring) — so it's clear which of several groups is actually playing. In compact mode the open
 stage's trigger icon turns into a ✕ (tap it to close, or tap another trigger to switch) — there's
-no separate close button stealing a row.
+no separate close button stealing a row. (`_text` falls back to a native `<input>` when
+`ha-textfield` isn't loaded in the editor context, so the Name / Default-volume fields always
+render.)
+
+The **per-room volume sliders** are an album-art "stage" too (always available, no compact flag):
+the chevron beside the master slider swaps the album art for the room sliders and back — the old
+popover overflowed on phones. On stacked/phone widths an open stage **grows the card** (so the
+surrounding popup does the single scroll) rather than scrolling inside the album-art square.
 ```yaml
 type: custom:sonos-music-card
 default_room: media_player.lounge          # optional: which group is focused on first load (localStorage wins after)

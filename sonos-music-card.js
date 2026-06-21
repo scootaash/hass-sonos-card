@@ -1,7 +1,7 @@
 /* Sonos Music Card — multi-room music player (Immersive) for Home Assistant.
    Live native Sonos grouping (group_members + join/unjoin), helper-free. */
 const TEAL = "linear-gradient(155deg,#0c4a5a 0%,#0a3140 52%,#06222e 100%)";
-const VERSION = "0.9.1";
+const VERSION = "0.10.0";
 const ICON = {
   prev: '<polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line>',
   next: '<polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line>',
@@ -83,7 +83,6 @@ class SonosMusicCard extends HTMLElement {
     this._drag = null;
     this._localVol = {};
     this._localVolAt = {};
-    this._open = false;
     this._lastPic = undefined;
     this._pillColor = null;
     this._built = false;
@@ -236,8 +235,9 @@ class SonosMusicCard extends HTMLElement {
 .pill.picon{padding:9px 12px;}
 .pill.picon ha-icon{--mdc-icon-size:22px;display:block;}
 .pill .dot,.pill .pn,.pill.picon>svg,.pill.picon>ha-icon{position:relative;z-index:1;}
-.pbg{position:absolute;inset:0;z-index:0;display:none;align-items:center;justify-content:center;color:rgba(255,255,255,.22);pointer-events:none;}
+.pbg{position:absolute;inset:0;z-index:0;display:none;align-items:center;justify-content:center;color:rgba(255,255,255,.6);pointer-events:none;}
 .pill.playing-bg .pbg{display:flex;}
+.pill.playing-bg>svg,.pill.playing-bg>ha-icon,.pill.playing-bg .dot,.pill.playing-bg .pn{opacity:.32;}
 .pill .dot{width:7px;height:7px;border-radius:99px;background:rgba(255,255,255,.3);}
 .pill.current{background:rgba(0,204,204,.16);border-color:rgba(0,204,204,.55);color:#fff;box-shadow:inset 0 0 0 2px #18b2c4;}
 .pill.current .dot{background:#eafdff;box-shadow:0 0 0 3px rgba(24,178,196,.55);}
@@ -260,12 +260,15 @@ class SonosMusicCard extends HTMLElement {
 .pltrig,.actrig{pointer-events:auto;width:49px;height:49px;border-radius:50%;border:none;background:rgba(4,22,30,.42);color:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(9px) saturate(1.4);-webkit-backdrop-filter:blur(9px) saturate(1.4);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);transition:background .18s;}
 .pltrig:hover,.actrig:hover{background:rgba(24,178,196,.32);}
 .pltrig.active,.actrig.active{background:#18b2c4;color:#06303d;box-shadow:inset 0 0 0 1px rgba(255,255,255,.3);}
-.stageovl{position:absolute;inset:0;z-index:4;background:linear-gradient(150deg,#0c4a5a,#06222e);padding:72px 16px 16px;display:flex;flex-direction:column;gap:10px;opacity:0;visibility:hidden;transform:translateY(12px);transition:opacity .28s ease,transform .28s ease,visibility .28s;overflow:auto;}
-.art.s-groups .gstage,.art.s-playlists .plstage,.art.s-actions .actstage{opacity:1;visibility:visible;transform:none;}
-.art.s-groups .scrim,.art.s-playlists .scrim,.art.s-actions .scrim{opacity:0;pointer-events:none;}
-.art.s-groups .topstrip,.art.s-playlists .topstrip,.art.s-actions .topstrip{z-index:5;background:none;}
+.stageovl{position:absolute;inset:0;z-index:4;background:linear-gradient(150deg,#0c4a5a,#06222e);padding:18px 16px 16px;display:flex;flex-direction:column;gap:10px;opacity:0;visibility:hidden;transform:translateY(12px);transition:opacity .28s ease,transform .28s ease,visibility .28s;overflow:auto;}
+.art.has-strip .stageovl{padding-top:72px;}
+.art.s-groups .gstage,.art.s-playlists .plstage,.art.s-actions .actstage,.art.s-volume .vstage{opacity:1;visibility:visible;transform:none;}
+.art.s-groups .scrim,.art.s-playlists .scrim,.art.s-actions .scrim,.art.s-volume .scrim{opacity:0;pointer-events:none;}
+.art.s-groups .topstrip,.art.s-playlists .topstrip,.art.s-actions .topstrip,.art.s-volume .topstrip{z-index:5;background:none;}
 .stageovl .grid{flex:1;}
 .stageovl .actions{flex:none;}
+.vshd{display:flex;align-items:center;justify-content:space-between;flex:none;}
+.vstage .poprows{flex:1;overflow:auto;display:flex;flex-direction:column;gap:16px;margin-top:4px;}
 .np{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
 .eq{display:flex;align-items:flex-end;gap:3px;height:16px;}
 .eq span{width:3px;height:100%;background:#00e0e0;border-radius:2px;transform-origin:bottom;}
@@ -310,16 +313,15 @@ class SonosMusicCard extends HTMLElement {
 .vbtn:hover{background:rgba(255,255,255,.16);}
 .vbtn.act{background:#18b2c4;color:#06303d;border-color:transparent;}
 .mpct{font:700 9.5px/1 'DM Sans';color:#06303d;pointer-events:none;}
-.popwrap{position:relative;flex:none;}
+.vbtn.drop.active{background:#18b2c4;color:#06303d;border-color:transparent;}
+.vbtn.drop.active svg{transform:rotate(180deg);}
 .slider{position:relative;height:42px;display:flex;align-items:center;cursor:pointer;touch-action:none;flex:1;min-width:50px;}
 .slider .strack{position:relative;width:100%;height:8px;border-radius:99px;background:rgba(255,255,255,.2);}
 .slider .sfill{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,#0c6678,#18b2c4);width:0;}
 .slider .sknob{position:absolute;top:50%;width:20px;height:20px;border-radius:99px;background:#fff;transform:translate(-50%,-50%);left:0;display:flex;align-items:center;justify-content:center;}
 .slider.master .sknob{width:34px;height:34px;box-shadow:0 2px 6px rgba(0,0,0,.35);}
-.pop{position:absolute;top:calc(100% + 12px);right:0;width:340px;max-width:calc(100vw - 32px);max-height:70vh;overflow:auto;padding:18px;border-radius:16px;background:#0a2f3c;border:1px solid rgba(255,255,255,.14);z-index:30;box-shadow:0 18px 40px rgba(0,0,0,.5);}
-.pophead,.prhead{display:flex;align-items:center;justify-content:space-between;}
+.prhead{display:flex;align-items:center;justify-content:space-between;}
 .popcnt{font:600 12px/1 'DM Sans';color:#7fe9ef;}
-.poprows{display:flex;flex-direction:column;gap:16px;margin-top:16px;}
 .prn{font:600 14px/1 'DM Sans';color:#fff;}
 .prr{display:flex;align-items:center;gap:8px;}
 .prdef{display:inline-flex;align-items:center;justify-content:center;padding:6px 8px;border-radius:99px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.82);cursor:pointer;}
@@ -328,30 +330,50 @@ class SonosMusicCard extends HTMLElement {
 .sm .strack{background:rgba(255,255,255,.15);} .sm .sfill{background:#18b2c4;}
 .panel{flex:none;width:386px;display:flex;flex-direction:column;gap:16px;padding:24px;border-radius:20px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);}
 .actions{display:flex;flex-direction:column;gap:10px;}
-.abtn{display:flex;align-items:center;gap:14px;padding:16px;border-radius:16px;border:1px solid rgba(0,102,255,.5);background:linear-gradient(135deg,rgba(0,102,255,.28),rgba(0,204,204,.2));color:#fff;cursor:pointer;text-align:left;width:100%;}
+.abtn{display:flex;align-items:center;gap:14px;padding:16px;border-radius:16px;border:1px solid rgba(0,102,255,.5);background:linear-gradient(135deg,rgba(0,102,255,.28),rgba(0,204,204,.2));color:#fff;cursor:pointer;text-align:left;width:100%;transition:transform .09s ease,filter .12s ease;}
+.abtn:active{transform:scale(.97);filter:brightness(1.1);}
 .abic{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.16);flex:none;}
 .abic ha-icon{--mdc-icon-size:22px;}
 .abt1{display:block;font:700 16px/1.2 'DM Sans';}
 .abt2{display:block;font:400 13px/1.3 'DM Sans';color:rgba(255,255,255,.7);margin-top:3px;}
 .grid{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:12px;overflow:auto;}
-.tile{position:relative;display:flex;flex-direction:column;justify-content:flex-end;padding:14px;border-radius:14px;min-height:118px;border:none;cursor:pointer;text-align:left;overflow:hidden;color:#fff;}
+.tile{position:relative;display:flex;flex-direction:column;justify-content:flex-end;padding:14px;border-radius:14px;min-height:118px;border:none;cursor:pointer;text-align:left;overflow:hidden;color:#fff;transition:transform .09s ease,filter .12s ease,box-shadow .12s ease;}
+.tile:active{transform:scale(.94);filter:brightness(1.14);box-shadow:0 6px 18px rgba(0,0,0,.4);}
 .tile .tscrim{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.55),transparent 60%);}
 .tile .tn{position:relative;font:700 15px/1.15 'DM Sans';color:#fff;}
-.root.narrow .wrap{flex-direction:column;gap:24px;padding:28px;}
-.root.narrow .panel{width:auto;}
+.root.narrow .wrap{flex-direction:column;gap:20px;padding:20px;}
+.root.narrow .panel{width:auto;padding:16px;}
+.root.narrow .panel .grid{overflow:visible;}
 .root.stack .player{flex-direction:column;}
 .root.stack .art{width:100%;height:auto;aspect-ratio:1/1;}
-.root.phone .vstep{width:38px;height:38px;}
 .root.stack .gsi{width:34px;height:34px;font-size:13px;}
 .root.stack .gsi ha-icon{--mdc-icon-size:19px;}
 .root.stack .pltrig,.root.stack .actrig{width:44px;height:44px;}
-.root.stack .stageovl{padding-top:64px;}
+.root.stack .art.has-strip .stageovl{padding-top:64px;}
+/* On stacked layouts, let an open stage grow the card so the popup is the single
+   scroll — rather than scrolling inside the album-art square. */
+.root.stack .art.s-groups,.root.stack .art.s-playlists,.root.stack .art.s-actions,.root.stack .art.s-volume{height:auto;aspect-ratio:auto;min-height:62vw;}
+.root.stack .art.s-groups .gstage,.root.stack .art.s-playlists .plstage,.root.stack .art.s-actions .actstage,.root.stack .art.s-volume .vstage{position:relative;overflow:visible;}
+.root.stack .art.s-playlists .grid,.root.stack .art.s-volume .poprows{overflow:visible;}
+/* Phones: smaller pills/icons and tighter padding (it's framed by the popup anyway). */
+.root.phone{border-radius:14px;}
+.root.phone .wrap{padding:12px;gap:16px;}
+.root.phone .panel{padding:12px;}
+.root.phone .pill{padding:7px 12px;gap:6px;}
+.root.phone .pill.picon{padding:7px 10px;}
+.root.phone .pill.picon ha-icon{--mdc-icon-size:19px;}
+.root.phone .pill.picon>svg{width:19px;height:19px;}
+.root.phone .gsi{width:30px;height:30px;}
+.root.phone .gsi ha-icon{--mdc-icon-size:17px;}
+.root.phone .pltrig,.root.phone .actrig{width:40px;height:40px;}
+.root.phone .vstep{width:34px;height:34px;}
+.root.phone .volrow{padding:8px 10px;}
 </style>
 <div class="root">
   <div class="wash"></div><div class="blob b1"></div><div class="blob b2"></div>
   <div class="wrap">
     <div class="left">
-      <div class="col"><span class="ovl">Speakers — tap to select group</span><div class="pillrow">${pills}</div></div>
+      <div class="col"><div class="pillrow">${pills}</div></div>
       <div class="volrow">
         <span class="vic">${svg(ICON.vol, 20)}</span>
         <div class="vgroup">
@@ -360,16 +382,10 @@ class SonosMusicCard extends HTMLElement {
           <button class="vstep mup" aria-label="Group volume up">${svg(ICON.plus, 20, 2.8)}</button>
         </div>
         <button class="vbtn mvol" aria-label="Reset all to defaults">${svg(ICON.reset, 17, 2.2)}</button>
-        <div class="popwrap">
-          <button class="vbtn drop" aria-label="Room volumes">${svg(ICON.chev, 18)}</button>
-          <div class="pop" style="display:none">
-            <div class="pophead"><span class="ovl">Room volumes</span><span class="popcnt"></span></div>
-            <div class="poprows">${popRooms}</div>
-          </div>
-        </div>
+        <button class="vbtn drop" aria-label="Room volumes">${svg(ICON.chev, 18)}</button>
       </div>
       <div class="player${cg ? " cg" : ""}">
-        <div class="art">
+        <div class="art${(cg || cp || showAct) ? " has-strip" : ""}">
           <img class="cover" alt="" style="display:none">
           ${(cg || cp || showAct) ? `<div class="topstrip">${cg ? `<div class="gstrip"></div>` : "<span></span>"}<div class="trigs">${cp ? `<button class="pltrig" aria-label="${esc(this._playlistsTitle)}" title="${esc(this._playlistsTitle)}">${svg(ICON.music, 22)}</button>` : ""}${showAct ? `<button class="actrig" aria-label="${esc(this._actionsTitle)}" title="${esc(this._actionsTitle)}">${this._icon(this._actions[0] ? this._actions[0].icon : "book", 22)}</button>` : ""}</div></div>` : ""}
           <div class="scrim">
@@ -387,6 +403,7 @@ class SonosMusicCard extends HTMLElement {
           ${cg ? `<div class="stageovl gstage">${groupBuilder}</div>` : ""}
           ${cp ? `<div class="stageovl plstage"><div class="grid"></div></div>` : ""}
           ${showAct ? `<div class="stageovl actstage"><div class="actions">${actionBtns}</div></div>` : ""}
+          <div class="stageovl vstage"><div class="vshd"><span class="ovl">Room volumes</span><span class="popcnt"></span></div><div class="poprows">${popRooms}</div></div>
         </div>
         ${cg ? "" : `<div class="gcol">${groupBuilder}</div>`}
       </div>
@@ -410,7 +427,7 @@ class SonosMusicCard extends HTMLElement {
       splitbtn: $(".splitbtn"), addall: $(".addall"),
       mFill: $(".slider.master .sfill"), mKnob: $(".slider.master .sknob"), mSlider: $(".slider.master"),
       mdn: $(".mdn"), mup: $(".mup"), mpct: $(".mpct"),
-      drop: $(".drop"), pop: $(".pop"), popcnt: $(".popcnt"), mvol: $(".mvol"),
+      drop: $(".drop"), popcnt: $(".popcnt"), mvol: $(".mvol"),
       grid: $(".grid"), actions: [...root.querySelectorAll(".abtn")],
       prows: [...root.querySelectorAll(".prow")],
       gstrip: $(".gstrip"), pltrig: $(".pltrig"), actrig: $(".actrig"),
@@ -435,15 +452,13 @@ class SonosMusicCard extends HTMLElement {
       el.querySelector(".rdn").addEventListener("click", () => this._nudge(i, -5));
       el.querySelector(".rup").addEventListener("click", () => this._nudge(i, 5));
     });
-    this.$.drop.addEventListener("click", (e) => { e.stopPropagation(); this._open = !this._open; this._update(); });
+    this.$.drop.addEventListener("click", () => this._toggleStage("volume"));
     this.$.mvol.addEventListener("click", () => this._setDefaults());
     this.$.actions.forEach((el) => el.addEventListener("click", () => this._runAction(+el.dataset.act)));
     if (this._compactGroups && this.$.gstrip) this.$.gstrip.addEventListener("click", () => this._toggleStage("groups"));
     if (this._compactPlaylists && this.$.pltrig) this.$.pltrig.addEventListener("click", () => this._toggleStage("playlists"));
     if (this.$.actrig) this.$.actrig.addEventListener("click", () => this._toggleStage("actions"));
     this._renderTiles();
-    this._onDoc = (e) => { if (this._open && !e.composedPath().includes(this.$.pop) && e.composedPath().indexOf(this.$.drop) < 0) { this._open = false; this._update(); } };
-    document.addEventListener("click", this._onDoc);
     this._observe();
   }
 
@@ -695,7 +710,8 @@ class SonosMusicCard extends HTMLElement {
     // cover
     if (pic) { if (this.$.cover.getAttribute("src") !== pic) this.$.cover.src = pic; this.$.cover.style.display = ""; }
     else this.$.cover.style.display = "none";
-    // compact mode — album-art "stage" overlay, grouped-speaker icon strip, active triggers
+    // album-art "stage" overlays — volume always available; groups/playlists/shortcuts in compact mode
+    this.$.art.classList.toggle("s-volume", this._stage === "volume");
     if (this._compactGroups || this._compactPlaylists || (this._compactActions && this._actions.length)) {
       this.$.art.classList.toggle("s-groups", this._stage === "groups");
       this.$.art.classList.toggle("s-playlists", this._stage === "playlists");
@@ -759,22 +775,21 @@ class SonosMusicCard extends HTMLElement {
       this.$.barF.style.width = pct + "%"; this.$.barK.style.left = pct + "%";
       this.$.el.textContent = fmt(pos); this.$.du.textContent = dur ? fmt(dur) : "—";
     }
-    // volume — master slider shows the group level (average); popover = per-room
+    // volume — master slider shows the group level (average); the per-room sliders
+    // live on the "volume" album-art stage (the chevron opens it; tap again to close)
     const mv = this._masterVal();
     this.$.mFill.style.width = mv + "%"; this.$.mKnob.style.left = mv + "%";
     this.$.mpct.textContent = grouped.length ? mv + "%" : "";
-    this.$.drop.classList.toggle("act", this._open);
-    this.$.pop.style.display = this._open ? "" : "none";
-    if (this._open) {
-      this.$.popcnt.textContent = grouped.length + (grouped.length === 1 ? " room" : " rooms");
-      this._rooms.forEach((r, i) => {
-        const row = this.$.prows[i]; const show = members.has(r.entity); row.style.display = show ? "" : "none";
-        if (!show) return;
-        const v = this._vol(r);
-        row.querySelector(".prpct").textContent = v + "%";
-        row.querySelector(".sfill").style.width = v + "%"; row.querySelector(".sknob").style.left = v + "%";
-      });
-    }
+    this.$.drop.classList.toggle("active", this._stage === "volume");
+    this.$.popcnt.textContent = grouped.length + (grouped.length === 1 ? " room" : " rooms");
+    this._rooms.forEach((r, i) => {
+      const row = this.$.prows[i]; if (!row) return;
+      const show = members.has(r.entity); row.style.display = show ? "" : "none";
+      if (!show) return;
+      const v = this._vol(r);
+      row.querySelector(".prpct").textContent = v + "%";
+      row.querySelector(".sfill").style.width = v + "%"; row.querySelector(".sknob").style.left = v + "%";
+    });
     // action subtitles — live now-playing from status_entity, else the static subtitle
     this._actions.forEach((act, i) => {
       const el = this.$.actions[i]; if (!el) return;
@@ -863,9 +878,21 @@ class SonosMusicCardEditor extends HTMLElement {
     b.addEventListener("click", cb); return b;
   }
   _text(label, value, onInput, type) {
-    const el = document.createElement("ha-textfield");
-    el.label = label; el.value = value == null ? "" : String(value); if (type) el.type = type; el.style.width = "100%";
-    el.addEventListener("input", () => onInput(el.value)); return el;
+    // Prefer HA's themed field, but fall back to a native input when ha-textfield
+    // isn't loaded in the editor context (otherwise it renders as an empty element).
+    if (customElements.get("ha-textfield")) {
+      const el = document.createElement("ha-textfield");
+      el.label = label; el.value = value == null ? "" : String(value); if (type) el.type = type; el.style.width = "100%";
+      el.addEventListener("input", () => onInput(el.value)); return el;
+    }
+    const wrap = document.createElement("label");
+    wrap.style.cssText = "display:flex;flex-direction:column;gap:4px;width:100%;";
+    const lab = document.createElement("span"); lab.textContent = label; lab.style.cssText = "font-size:12px;opacity:.7;";
+    const el = document.createElement("input");
+    el.type = type || "text"; el.value = value == null ? "" : String(value);
+    el.style.cssText = "padding:9px;border-radius:6px;background:var(--secondary-background-color,rgba(127,127,127,.12));color:var(--primary-text-color,inherit);border:1px solid var(--divider-color,rgba(127,127,127,.3));font:inherit;width:100%;box-sizing:border-box;";
+    el.addEventListener("input", () => onInput(el.value));
+    wrap.append(lab, el); return wrap;
   }
   _entity(label, value, onChange) {
     const el = document.createElement("ha-entity-picker");
