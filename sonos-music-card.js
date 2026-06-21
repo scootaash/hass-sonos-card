@@ -1,7 +1,7 @@
 /* Sonos Music Card — multi-room music player (Immersive) for Home Assistant.
    Live native Sonos grouping (group_members + join/unjoin), helper-free. */
 const TEAL = "linear-gradient(155deg,#0c4a5a 0%,#0a3140 52%,#06222e 100%)";
-const VERSION = "0.11.0";
+const VERSION = "0.12.0";
 const ICON = {
   prev: '<polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line>',
   next: '<polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line>',
@@ -202,7 +202,7 @@ class SonosMusicCard extends HTMLElement {
   _build() {
     this._built = true;
     this._lastStageRender = null;
-    this._lastPic = undefined; this._lastThemeCol = undefined;
+    this._lastPic = undefined;
     const root = this.attachShadow ? (this.shadowRoot || this.attachShadow({ mode: "open" })) : this;
     const pbg = `<span class="pbg">${svg(ICON.play, 30, 0, "currentColor")}</span>`;
     const pills = this._rooms.map((r, i) =>
@@ -223,7 +223,7 @@ class SonosMusicCard extends HTMLElement {
     const panelHasContent = panelActions || (!cp && this._playlistsConfigured);
 
     root.innerHTML = `<style>
-:host{display:block;}
+:host{display:block;--smc-tint:255,255,255;}
 *{box-sizing:border-box;}
 @keyframes eq{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}
 .root{position:relative;width:100%;max-width:1280px;margin:0 auto;border-radius:20px;overflow:hidden;background:${TEAL};font-family:'DM Sans',system-ui,sans-serif;color:#fff;}
@@ -231,24 +231,29 @@ class SonosMusicCard extends HTMLElement {
 .blob{position:absolute;border-radius:99px;filter:blur(20px);z-index:0;}
 .b1{top:-160px;left:-120px;width:620px;height:620px;background:radial-gradient(circle,rgba(24,178,196,.45),transparent 65%);}
 .b2{bottom:-200px;right:120px;width:560px;height:560px;background:radial-gradient(circle,rgba(13,90,110,.6),transparent 65%);}
+/* theme: ha — adopt the Home Assistant theme's card surface + text, and tint the
+   chrome from the theme text colour (so it matches frosted-glass / any HA theme). */
+.root.theme-ha{background:var(--ha-card-background,var(--card-background-color,${TEAL}));color:var(--primary-text-color,#fff);--smc-tint:var(--rgb-primary-text-color,255,255,255);backdrop-filter:blur(16px) saturate(1.25);-webkit-backdrop-filter:blur(16px) saturate(1.25);}
+.root.theme-ha .wash,.root.theme-ha .blob{display:none;}
+.root.theme-ha .scrim,.root.theme-ha .topstrip{--smc-tint:255,255,255;}
 .wrap{position:relative;z-index:1;display:flex;gap:36px;padding:40px;}
 .left{flex:1;display:flex;flex-direction:column;gap:22px;min-width:0;}
-.ovl{font:700 11px/1.2 'DM Sans';letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.55);}
+.ovl{font:700 11px/1.2 'DM Sans';letter-spacing:.16em;text-transform:uppercase;color:rgba(var(--smc-tint),.55);}
 .col{display:flex;flex-direction:column;gap:10px;}
 .pillrow{display:grid;grid-template-columns:repeat(var(--pcols,6),auto);gap:10px;justify-content:start;align-items:start;}
-.pill{position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:9px 16px;border-radius:99px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.07);color:rgba(255,255,255,.78);font:500 14px/1 'DM Sans';cursor:pointer;transition:opacity .2s;}
+.pill{position:relative;overflow:hidden;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:9px 16px;border-radius:99px;border:1px solid rgba(var(--smc-tint),.16);background:rgba(var(--smc-tint),.07);color:rgba(var(--smc-tint),.78);font:500 14px/1 'DM Sans';cursor:pointer;transition:opacity .2s;}
 .pill.picon{padding:9px 12px;}
 .pill.picon ha-icon{--mdc-icon-size:22px;display:block;}
 .pill .dot,.pill .pn,.pill.picon>svg,.pill.picon>ha-icon{position:relative;z-index:1;}
-.pbg{position:absolute;inset:0;z-index:0;display:none;align-items:center;justify-content:center;color:rgba(255,255,255,.6);pointer-events:none;}
+.pbg{position:absolute;inset:0;z-index:0;display:none;align-items:center;justify-content:center;color:rgba(var(--smc-tint),.6);pointer-events:none;}
 .pill.playing-bg .pbg{display:flex;}
 .pill.playing-bg>svg,.pill.playing-bg>ha-icon,.pill.playing-bg .dot,.pill.playing-bg .pn{opacity:.32;}
-.pill .dot{width:7px;height:7px;border-radius:99px;background:rgba(255,255,255,.3);}
+.pill .dot{width:7px;height:7px;border-radius:99px;background:rgba(var(--smc-tint),.3);}
 .pill.current{background:rgba(0,204,204,.16);border-color:rgba(0,204,204,.55);color:#fff;box-shadow:inset 0 0 0 2px #18b2c4;}
 .pill.current .dot{background:#eafdff;box-shadow:0 0 0 3px rgba(24,178,196,.55);}
-.pill.follower{opacity:.55;background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.1);color:rgba(255,255,255,.6);}
+.pill.follower{opacity:.55;background:rgba(var(--smc-tint),.04);border-color:rgba(var(--smc-tint),.1);color:rgba(var(--smc-tint),.6);}
 .pill.follower:hover{opacity:.85;}
-.pill.follower .dot{background:rgba(255,255,255,.25);}
+.pill.follower .dot{background:rgba(var(--smc-tint),.25);}
 .player{flex:1;display:flex;gap:22px;min-height:0;}
 .art{position:relative;flex:none;width:498px;height:498px;border-radius:20px;overflow:hidden;background:linear-gradient(150deg,#1bb6c7,#0c5f72 48%,#07303f);}
 .cover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
@@ -256,15 +261,15 @@ class SonosMusicCard extends HTMLElement {
 .player.cg{justify-content:center;}
 .player.cg .art{flex:1;width:auto;height:auto;aspect-ratio:1/1;max-width:560px;max-height:100%;}
 .topstrip{position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:14px 14px 30px;pointer-events:none;background:linear-gradient(to bottom,rgba(4,22,30,.82),rgba(4,22,30,.34) 52%,transparent);}
-.gstrip{pointer-events:auto;display:flex;align-items:center;gap:7px;cursor:pointer;padding:6px 9px;border-radius:99px;background:rgba(4,22,30,.32);backdrop-filter:blur(9px) saturate(1.4);-webkit-backdrop-filter:blur(9px) saturate(1.4);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);}
+.gstrip{pointer-events:auto;display:flex;align-items:center;gap:7px;cursor:pointer;padding:6px 9px;border-radius:99px;background:rgba(4,22,30,.32);backdrop-filter:blur(9px) saturate(1.4);-webkit-backdrop-filter:blur(9px) saturate(1.4);box-shadow:inset 0 0 0 1px rgba(var(--smc-tint),.14);}
 .gstrip:empty{display:none;}
 .gstrip.active{background:rgba(24,178,196,.5);box-shadow:inset 0 0 0 2px rgba(24,178,196,.9);}
-.gsi{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.2);display:inline-flex;align-items:center;justify-content:center;color:#fff;font:700 15px/1 'DM Sans';}
+.gsi{width:40px;height:40px;border-radius:50%;background:rgba(var(--smc-tint),.2);display:inline-flex;align-items:center;justify-content:center;color:#fff;font:700 15px/1 'DM Sans';}
 .gsi ha-icon{--mdc-icon-size:22px;}
 .trigs{pointer-events:auto;display:flex;align-items:center;gap:8px;flex:none;}
-.pltrig,.actrig{pointer-events:auto;width:49px;height:49px;border-radius:50%;border:none;background:rgba(4,22,30,.42);color:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(9px) saturate(1.4);-webkit-backdrop-filter:blur(9px) saturate(1.4);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16);transition:background .18s;}
+.pltrig,.actrig{pointer-events:auto;width:49px;height:49px;border-radius:50%;border:none;background:rgba(4,22,30,.42);color:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(9px) saturate(1.4);-webkit-backdrop-filter:blur(9px) saturate(1.4);box-shadow:inset 0 0 0 1px rgba(var(--smc-tint),.16);transition:background .18s;}
 .pltrig:hover,.actrig:hover{background:rgba(24,178,196,.32);}
-.pltrig.active,.actrig.active{background:#18b2c4;color:#06303d;box-shadow:inset 0 0 0 1px rgba(255,255,255,.3);}
+.pltrig.active,.actrig.active{background:#18b2c4;color:#06303d;box-shadow:inset 0 0 0 1px rgba(var(--smc-tint),.3);}
 .stageovl{position:absolute;inset:0;z-index:4;background:linear-gradient(150deg,#0c4a5a,#06222e);padding:18px 16px 16px;display:flex;flex-direction:column;gap:10px;opacity:0;visibility:hidden;transform:translateY(12px);transition:opacity .28s ease,transform .28s ease,visibility .28s;overflow:auto;}
 .art.has-strip .stageovl{padding-top:72px;}
 .art.s-groups .gstage,.art.s-playlists .plstage,.art.s-actions .actstage,.art.s-volume .vstage{opacity:1;visibility:visible;transform:none;}
@@ -281,47 +286,47 @@ class SonosMusicCard extends HTMLElement {
 .eq.on span:nth-child(2){animation-delay:-.45s}
 .npt{min-width:0;}
 .t1{font:700 20px/1.2 'DM Sans';color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.t2{font:400 14px/1.3 'DM Sans';color:rgba(255,255,255,.7);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.t2{font:400 14px/1.3 'DM Sans';color:rgba(var(--smc-tint),.7);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .prog{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
-.prog .te{font:400 12px/1 'DM Sans';color:rgba(255,255,255,.7);min-width:30px;}
-.bar{position:relative;flex:1;height:5px;border-radius:99px;background:rgba(255,255,255,.22);cursor:pointer;}
+.prog .te{font:400 12px/1 'DM Sans';color:rgba(var(--smc-tint),.7);min-width:30px;}
+.bar{position:relative;flex:1;height:5px;border-radius:99px;background:rgba(var(--smc-tint),.22);cursor:pointer;}
 .bar .f{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:#fff;width:0;}
 .bar .k{position:absolute;top:50%;width:12px;height:12px;border-radius:99px;background:#fff;transform:translate(-50%,-50%);left:0;}
 .tr{display:flex;align-items:center;justify-content:center;gap:26px;}
-.tr button{display:inline-flex;align-items:center;justify-content:center;border:none;background:transparent;color:rgba(255,255,255,.9);cursor:pointer;width:48px;height:48px;}
+.tr button{display:inline-flex;align-items:center;justify-content:center;border:none;background:transparent;color:rgba(var(--smc-tint),.9);cursor:pointer;width:48px;height:48px;}
 .tr .pp{width:74px;height:74px;border-radius:99px;background:#fff;color:#07303f;}
 .gcol{flex:1;display:flex;flex-direction:column;gap:10px;min-width:0;}
 .gchead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
 .ghbtns{display:flex;gap:8px;flex-wrap:wrap;}
-.splitbtn,.addall{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.08);color:rgba(255,255,255,.85);font:600 11px/1.1 'DM Sans';cursor:pointer;}
-.splitbtn:hover,.addall:hover{background:rgba(255,255,255,.14);}
+.splitbtn,.addall{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;border:1px solid rgba(var(--smc-tint),.22);background:rgba(var(--smc-tint),.08);color:rgba(var(--smc-tint),.85);font:600 11px/1.1 'DM Sans';cursor:pointer;}
+.splitbtn:hover,.addall:hover{background:rgba(var(--smc-tint),.14);}
 .addall{border-color:rgba(0,204,204,.45);color:#bdeef2;}
 .glist{flex:1;display:flex;flex-direction:column;gap:9px;}
-.grow{display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);cursor:pointer;}
-.gicon{display:inline-flex;align-items:center;justify-content:center;width:26px;flex:none;color:rgba(255,255,255,.85);}
+.grow{display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:14px;background:rgba(var(--smc-tint),.06);border:1px solid rgba(var(--smc-tint),.13);cursor:pointer;}
+.gicon{display:inline-flex;align-items:center;justify-content:center;width:26px;flex:none;color:rgba(var(--smc-tint),.85);}
 .gicon ha-icon{--mdc-icon-size:24px;}
 .gtext{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;}
-.gn{font:600 15px/1.2 'DM Sans';color:rgba(255,255,255,.92);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.gs{font:500 11px/1 'DM Sans';letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;color:rgba(255,255,255,.45);}
+.gn{font:600 15px/1.2 'DM Sans';color:rgba(var(--smc-tint),.92);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.gs{font:500 11px/1 'DM Sans';letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;color:rgba(var(--smc-tint),.45);}
 .grow.grp{background:rgba(0,204,204,.1);border-color:rgba(0,204,204,.4);} .grow.grp .gs{color:#7fe9ef;}
 .grow.master{background:rgba(0,204,204,.16);border-color:rgba(0,204,204,.55);box-shadow:inset 0 0 0 2px #18b2c4;} .grow.master .gs{color:#7fe9ef;}
-.gtog{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:none;border-radius:99px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.85);cursor:pointer;flex:none;}
+.gtog{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border:none;border-radius:99px;background:rgba(var(--smc-tint),.1);color:rgba(var(--smc-tint),.85);cursor:pointer;flex:none;}
 .grow.grp .gtog{background:#00CCCC;color:#06303d;}
 .grow.master .gtog{background:#18b2c4;color:#06303d;}
 .gtog.move{background:rgba(232,145,58,.2);color:#f3c18a;box-shadow:inset 0 0 0 1px rgba(232,145,58,.5);}
-.volrow{position:relative;display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);}
-.vic{display:inline-flex;align-items:center;color:rgba(255,255,255,.8);flex:none;}
-.vgroup{flex:1;min-width:0;display:flex;align-items:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:99px;padding:2px;}
+.volrow{position:relative;display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:16px;background:rgba(var(--smc-tint),.07);border:1px solid rgba(var(--smc-tint),.13);}
+.vic{display:inline-flex;align-items:center;color:rgba(var(--smc-tint),.8);flex:none;}
+.vgroup{flex:1;min-width:0;display:flex;align-items:center;background:rgba(var(--smc-tint),.06);border:1px solid rgba(var(--smc-tint),.14);border-radius:99px;padding:2px;}
 .vstep{width:42px;height:42px;border-radius:50%;border:none;background:transparent;color:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:none;}
-.vstep:hover{background:rgba(255,255,255,.14);}
-.vbtn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;flex:none;}
-.vbtn:hover{background:rgba(255,255,255,.16);}
+.vstep:hover{background:rgba(var(--smc-tint),.14);}
+.vbtn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;border:1px solid rgba(var(--smc-tint),.18);background:rgba(var(--smc-tint),.08);color:#fff;cursor:pointer;flex:none;}
+.vbtn:hover{background:rgba(var(--smc-tint),.16);}
 .vbtn.act{background:#18b2c4;color:#06303d;border-color:transparent;}
 .mpct{font:700 9.5px/1 'DM Sans';color:#06303d;pointer-events:none;}
 .vbtn.drop.active{background:#18b2c4;color:#06303d;border-color:transparent;}
 .vbtn.drop.active svg{transform:rotate(180deg);}
 .slider{position:relative;height:42px;display:flex;align-items:center;cursor:pointer;touch-action:none;flex:1;min-width:50px;}
-.slider .strack{position:relative;width:100%;height:8px;border-radius:99px;background:rgba(255,255,255,.2);}
+.slider .strack{position:relative;width:100%;height:8px;border-radius:99px;background:rgba(var(--smc-tint),.2);}
 .slider .sfill{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,#0c6678,#18b2c4);width:0;}
 .slider .sknob{position:absolute;top:50%;width:20px;height:20px;border-radius:99px;background:#fff;transform:translate(-50%,-50%);left:0;display:flex;align-items:center;justify-content:center;}
 .slider.master .sknob{width:34px;height:34px;box-shadow:0 2px 6px rgba(0,0,0,.35);}
@@ -329,18 +334,18 @@ class SonosMusicCard extends HTMLElement {
 .popcnt{font:600 12px/1 'DM Sans';color:#7fe9ef;}
 .prn{font:600 14px/1 'DM Sans';color:#fff;}
 .prr{display:flex;align-items:center;gap:8px;}
-.prdef{display:inline-flex;align-items:center;justify-content:center;padding:6px 8px;border-radius:99px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.82);cursor:pointer;}
+.prdef{display:inline-flex;align-items:center;justify-content:center;padding:6px 8px;border-radius:99px;background:rgba(var(--smc-tint),.08);border:1px solid rgba(var(--smc-tint),.2);color:rgba(var(--smc-tint),.82);cursor:pointer;}
 .prpct{font:700 12px/1 'DM Sans';color:#7fe9ef;min-width:34px;text-align:right;}
 .prslide{display:flex;align-items:center;gap:10px;margin-top:8px;}
-.sm .strack{background:rgba(255,255,255,.15);} .sm .sfill{background:#18b2c4;}
-.panel{flex:none;width:386px;display:flex;flex-direction:column;gap:16px;padding:24px;border-radius:20px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);}
+.sm .strack{background:rgba(var(--smc-tint),.15);} .sm .sfill{background:#18b2c4;}
+.panel{flex:none;width:386px;display:flex;flex-direction:column;gap:16px;padding:24px;border-radius:20px;background:rgba(var(--smc-tint),.07);border:1px solid rgba(var(--smc-tint),.14);}
 .actions{display:flex;flex-direction:column;gap:10px;}
 .abtn{display:flex;align-items:center;gap:14px;padding:16px;border-radius:16px;border:1px solid rgba(0,102,255,.5);background:linear-gradient(135deg,rgba(0,102,255,.28),rgba(0,204,204,.2));color:#fff;cursor:pointer;text-align:left;width:100%;transition:transform .09s ease,filter .12s ease;}
 .abtn:active{transform:scale(.97);filter:brightness(1.1);}
-.abic{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.16);flex:none;}
+.abic{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:12px;background:rgba(var(--smc-tint),.16);flex:none;}
 .abic ha-icon{--mdc-icon-size:22px;}
 .abt1{display:block;font:700 16px/1.2 'DM Sans';}
-.abt2{display:block;font:400 13px/1.3 'DM Sans';color:rgba(255,255,255,.7);margin-top:3px;}
+.abt2{display:block;font:400 13px/1.3 'DM Sans';color:rgba(var(--smc-tint),.7);margin-top:3px;}
 .grid{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:12px;overflow:auto;}
 .tile{position:relative;display:flex;flex-direction:column;justify-content:flex-end;padding:14px;border-radius:14px;min-height:118px;border:none;cursor:pointer;text-align:left;overflow:hidden;color:#fff;transition:transform .09s ease,filter .12s ease,box-shadow .12s ease;}
 .tile:active{transform:scale(.94);filter:brightness(1.14);box-shadow:0 6px 18px rgba(0,0,0,.4);}
@@ -374,7 +379,7 @@ class SonosMusicCard extends HTMLElement {
 .root.phone .vstep{width:34px;height:34px;}
 .root.phone .volrow{padding:8px 10px;}
 </style>
-<div class="root">
+<div class="root${this._theme === "ha" ? " theme-ha" : ""}">
   <div class="wash"></div><div class="blob b1"></div><div class="blob b2"></div>
   <div class="wrap">
     <div class="left">
@@ -551,7 +556,7 @@ class SonosMusicCard extends HTMLElement {
   _renderTiles() {
     if (!this.$ || !this.$.grid) return;
     if (!this._playlists.length) {
-      this.$.grid.innerHTML = this._playlistMsg ? `<div style="grid-column:1/-1;align-self:start;font:500 13px/1.45 'DM Sans';color:rgba(255,255,255,.6)">${esc(this._playlistMsg)}</div>` : "";
+      this.$.grid.innerHTML = this._playlistMsg ? `<div style="grid-column:1/-1;align-self:start;font:500 13px/1.45 'DM Sans';color:rgba(var(--smc-tint),.6)">${esc(this._playlistMsg)}</div>` : "";
       this.$.tiles = [];
       return;
     }
@@ -709,11 +714,11 @@ class SonosMusicCard extends HTMLElement {
     const m = this._coordRoom(); const s = this._st(m.entity); const a = (s && s.attributes) || {};
     const grouped = this._grouped();
     const playing = s && s.state === "playing";
-    // background wash — themed (HA theme primary), from album art, or fixed teal
+    // background — from album art (art), fixed teal (home), or the HA theme surface
+    // (ha: handled in CSS via .theme-ha; no JS wash so the theme shows through).
     const pic = a.entity_picture || null;
     if (this._theme === "art") this._applyWash(pic);
     else if (this._theme === "home") this._applyWash(null);
-    else this._applyThemeWash();
     // cover
     if (pic) { if (this.$.cover.getAttribute("src") !== pic) this.$.cover.src = pic; this.$.cover.style.display = ""; }
     else this.$.cover.style.display = "none";
@@ -813,27 +818,6 @@ class SonosMusicCard extends HTMLElement {
     });
   }
 
-  // Theme mode: tint the immersive gradient from Home Assistant's --primary-color
-  // (inherits into the shadow DOM), so the card matches the active dashboard theme.
-  _applyThemeWash() {
-    let col = null;
-    try { if (typeof getComputedStyle === "function") col = getComputedStyle(this).getPropertyValue("--primary-color").trim(); } catch (e) {}
-    if (col === this._lastThemeCol) return;
-    this._lastThemeCol = col;
-    this._lastPic = "__theme__";
-    this._setWash(this._parseColor(col));
-  }
-  _parseColor(c) {
-    if (!c) return null;
-    c = String(c).trim();
-    let m = c.match(/^#([0-9a-f]{3})$/i);
-    if (m) return [0, 1, 2].map((i) => parseInt(m[1][i] + m[1][i], 16));
-    m = c.match(/^#([0-9a-f]{6})$/i);
-    if (m) return [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16));
-    m = c.match(/^rgba?\(([^)]+)\)/i);
-    if (m) { const p = m[1].split(",").map((x) => parseFloat(x)); if (p.length >= 3 && p.slice(0, 3).every((n) => !isNaN(n))) return [p[0], p[1], p[2]]; }
-    return null;
-  }
   _applyWash(pic) {
     if (pic === this._lastPic) return;
     this._lastPic = pic;

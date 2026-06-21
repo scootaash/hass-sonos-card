@@ -87,14 +87,19 @@ The **per-room volume sliders** are an album-art "stage" too (always available, 
 the chevron beside the master slider swaps the album art for the room sliders and back — the old
 popover overflowed on phones. On stacked/phone widths an open stage **grows the card** (so the
 surrounding popup does the single scroll) rather than scrolling inside the album-art square.
-The **colour theme** is configurable (`theme:`, default `ha`): `ha` derives the immersive gradient
-from Home Assistant's `--primary-color` (the dashboard theme inherits into the shadow DOM — so the
-card matches whatever HA theme is set, no album-art mismatch); `art` is the original wash that
-recolours from the playing artwork; `home` is the fixed teal. The editor has a Theme dropdown.
+The **colour theme** is configurable (`theme:`, default `ha`): `ha` adopts Home Assistant's theme
+surfaces — the card background becomes `--ha-card-background`/`--card-background-color` (translucent
+themes like frosted-glass show through, plus a `backdrop-filter` blur), text uses
+`--primary-text-color`, and the chrome surfaces/borders are tinted from `--rgb-primary-text-color`
+via the `--smc-tint` token (so they adapt to light/dark). The album-art region (cover, scrim,
+now-playing, transport, compact triggers) keeps white-on-dark via a tint reset, since it sits over
+artwork. Accents stay teal for now. `art` is the original wash that recolours from the playing
+artwork; `home` is the fixed teal. `art`/`home` are unchanged because `--smc-tint` defaults to
+`255,255,255`. The editor has a Theme dropdown.
 ```yaml
 type: custom:sonos-music-card
 default_room: media_player.lounge          # optional: which group is focused on first load (localStorage wins after)
-theme: ha                                  # ha (match HA theme, default) | art (recolour from album art) | home (fixed teal)
+theme: ha                                  # ha (adopt HA theme surfaces, default) | art (recolour from album art) | home (fixed teal)
 compact_groups: false                      # true → grouped-speaker icon strip on the album art; tap swaps to the group builder
 compact_playlists: false                   # true → a playlists icon on the album art; tap swaps to the playlist grid
 compact_actions: false                     # true → a shortcuts icon on the album art; tap swaps to the action buttons
