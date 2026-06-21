@@ -1,7 +1,7 @@
 /* Sonos Music Card — multi-room music player (Immersive) for Home Assistant.
    Live native Sonos grouping (group_members + join/unjoin), helper-free. */
 const TEAL = "linear-gradient(155deg,#0c4a5a 0%,#0a3140 52%,#06222e 100%)";
-const VERSION = "0.7.0";
+const VERSION = "0.7.1";
 const ICON = {
   prev: '<polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line>',
   next: '<polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line>',
@@ -275,12 +275,13 @@ class SonosMusicCard extends HTMLElement {
 .vbtn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;flex:none;}
 .vbtn:hover{background:rgba(255,255,255,.16);}
 .vbtn.act{background:#18b2c4;color:#06303d;border-color:transparent;}
-.mpct{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font:700 11px/1 'DM Sans';color:#fff;background:rgba(6,34,46,.6);padding:2px 8px;border-radius:99px;pointer-events:none;}
+.mpct{font:700 9.5px/1 'DM Sans';color:#06303d;pointer-events:none;}
 .popwrap{position:relative;flex:none;}
 .slider{position:relative;height:42px;display:flex;align-items:center;cursor:pointer;touch-action:none;flex:1;min-width:50px;}
 .slider .strack{position:relative;width:100%;height:8px;border-radius:99px;background:rgba(255,255,255,.2);}
 .slider .sfill{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,#0c6678,#18b2c4);width:0;}
-.slider .sknob{position:absolute;top:50%;width:20px;height:20px;border-radius:99px;background:#fff;transform:translate(-50%,-50%);left:0;}
+.slider .sknob{position:absolute;top:50%;width:20px;height:20px;border-radius:99px;background:#fff;transform:translate(-50%,-50%);left:0;display:flex;align-items:center;justify-content:center;}
+.slider.master .sknob{width:34px;height:34px;box-shadow:0 2px 6px rgba(0,0,0,.35);}
 .pop{position:absolute;top:calc(100% + 12px);right:0;width:340px;max-width:calc(100vw - 32px);max-height:70vh;overflow:auto;padding:18px;border-radius:16px;background:#0a2f3c;border:1px solid rgba(255,255,255,.14);z-index:30;box-shadow:0 18px 40px rgba(0,0,0,.5);}
 .pophead,.prhead{display:flex;align-items:center;justify-content:space-between;}
 .popcnt{font:600 12px/1 'DM Sans';color:#7fe9ef;}
@@ -317,7 +318,7 @@ class SonosMusicCard extends HTMLElement {
         <span class="vic">${svg(ICON.vol, 20)}</span>
         <div class="vgroup">
           <button class="vstep mdn" aria-label="Group volume down">${svg(ICON.minus, 20, 2.8)}</button>
-          <div class="slider master"><div class="strack"><div class="sfill"></div><div class="sknob"></div></div><span class="mpct"></span></div>
+          <div class="slider master"><div class="strack"><div class="sfill"></div><div class="sknob"><span class="mpct"></span></div></div></div>
           <button class="vstep mup" aria-label="Group volume up">${svg(ICON.plus, 20, 2.8)}</button>
         </div>
         <button class="vbtn mvol" aria-label="Reset all to defaults">${svg(ICON.reset, 17, 2.2)}</button>
@@ -813,6 +814,33 @@ class SonosMusicCardEditor extends HTMLElement {
     box.appendChild(this._iconPicker("Icon", room.icon, (v) => this._setRoom(i, "icon", v)));
     return box;
   }
+  _setPlaylist(key, val) {
+    let pl = this._config.playlists; if (Array.isArray(pl)) pl = { items: pl }; pl = Object.assign({}, pl);
+    if (val === undefined || val === "" || val === null) delete pl[key]; else pl[key] = val;
+    this._config = Object.assign({}, this._config, { playlists: pl });
+    this._emit();
+  }
+  _select(label, value, options, onChange) {
+    const wrap = document.createElement("div"); wrap.style.cssText = "display:flex;flex-direction:column;gap:4px;";
+    const lab = document.createElement("span"); lab.textContent = label; lab.style.cssText = "font-size:12px;opacity:.7;";
+    const sel = document.createElement("select");
+    sel.style.cssText = "padding:9px;border-radius:6px;background:var(--secondary-background-color,rgba(127,127,127,.12));color:var(--primary-text-color,inherit);border:1px solid var(--divider-color,rgba(127,127,127,.3));font:inherit;";
+    options.forEach(([v, t]) => { const o = document.createElement("option"); o.value = v; o.textContent = t; if (String(value) === v) o.selected = true; sel.appendChild(o); });
+    sel.addEventListener("change", () => onChange(sel.value));
+    wrap.append(lab, sel); return wrap;
+  }
+  _playlistsCard() {
+    let pl = this._config.playlists; if (Array.isArray(pl)) pl = { items: pl }; pl = pl || {};
+    const box = document.createElement("div");
+    box.style.cssText = "border:1px solid var(--divider-color,rgba(127,127,127,.3));border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;";
+    const h = document.createElement("span"); h.textContent = "Playlists"; h.style.fontWeight = "600"; box.appendChild(h);
+    box.appendChild(this._text("Section title", pl.title, (v) => this._setPlaylist("title", v)));
+    box.appendChild(this._text("Source (Music Assistant browse id, e.g. library://playlist)", pl.source, (v) => this._setPlaylist("source", v)));
+    box.appendChild(this._text("Source type", pl.source_type, (v) => this._setPlaylist("source_type", v)));
+    box.appendChild(this._select("Remove duplicates", pl.dedupe === undefined ? "id" : String(pl.dedupe), [["id", "Exact duplicates (default)"], ["name", "Same name"], ["false", "Keep all"]], (v) => this._setPlaylist("dedupe", v === "false" ? false : v)));
+    if (Array.isArray(pl.items) && pl.items.length) { const n = document.createElement("span"); n.textContent = `+ ${pl.items.length} explicit item(s) (edit in YAML)`; n.style.cssText = "font-size:11px;opacity:.6;"; box.appendChild(n); }
+    return box;
+  }
   _rebuild() {
     if (!this._config) return;
     this._pickers = []; this.innerHTML = "";
@@ -820,6 +848,7 @@ class SonosMusicCardEditor extends HTMLElement {
     root.appendChild(this._entity("Default room (focused on load)", this._config.default_room, (v) => this._setTop("default_room", v)));
     this._config.rooms.forEach((room, i) => root.appendChild(this._roomCard(room, i)));
     root.appendChild(this._btn("+ Add room", () => this._addRoom()));
+    root.appendChild(this._playlistsCard());
     this.appendChild(root); this._applyHass();
   }
 }
