@@ -1,7 +1,7 @@
 /* Sonos Music Card — multi-room music player (Immersive) for Home Assistant.
    Live native Sonos grouping (group_members + join/unjoin), helper-free. */
 const TEAL = "linear-gradient(155deg,#0c4a5a 0%,#0a3140 52%,#06222e 100%)";
-const VERSION = "0.13.0";
+const VERSION = "0.13.1";
 const ICON = {
   prev: '<polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line>',
   next: '<polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line>',
@@ -236,8 +236,16 @@ class SonosMusicCard extends HTMLElement {
 .root.theme-ha{background:var(--ha-card-background,var(--card-background-color,${TEAL}));color:var(--primary-text-color,#fff);--smc-tint:var(--rgb-primary-text-color,255,255,255);--smc-accent:var(--primary-color,var(--smc-accent));--smc-accent-rgb:var(--rgb-primary-color,0,204,204);--smc-accent-ink:var(--text-primary-color,var(--smc-accent-ink));backdrop-filter:blur(16px) saturate(1.25);-webkit-backdrop-filter:blur(16px) saturate(1.25);}
 .root.theme-ha .wash,.root.theme-ha .blob{display:none;}
 .root.theme-ha .scrim,.root.theme-ha .topstrip{--smc-tint:255,255,255;}
-.root.theme-ha .stageovl{background:var(--ha-card-background,var(--card-background-color,#0c4a5a));backdrop-filter:blur(18px) saturate(1.25);-webkit-backdrop-filter:blur(18px) saturate(1.25);}
-.root.theme-ha .abtn{background:rgba(var(--smc-tint),.08);border-color:rgba(var(--smc-tint),.18);}
+/* Stack the (translucent) theme surface a few times so the blurred album art
+   behind a stage is muted, not vivid — then lift the buttons off it with a
+   stronger fill + border + soft shadow so they read on a light frosted theme. */
+.root.theme-ha .stageovl{background:var(--ha-card-background,var(--card-background-color,#0c4a5a)),var(--ha-card-background,var(--card-background-color,#0c4a5a)),var(--ha-card-background,var(--card-background-color,#0c4a5a)),var(--ha-card-background,var(--card-background-color,#0c4a5a));backdrop-filter:blur(22px) saturate(1.3);-webkit-backdrop-filter:blur(22px) saturate(1.3);}
+.root.theme-ha .pill{color:rgba(var(--smc-tint),.9);}
+.root.theme-ha .pill:not(.current){background:rgba(var(--smc-tint),.1);border-color:rgba(var(--smc-tint),.22);box-shadow:0 1px 5px rgba(0,0,0,.08);}
+.root.theme-ha .grow:not(.grp):not(.master),.root.theme-ha .abtn{background:rgba(var(--smc-tint),.1);border-color:rgba(var(--smc-tint),.2);}
+.root.theme-ha .grow.grp{background:rgba(var(--smc-accent-rgb),.16);}
+.root.theme-ha .grow:not(.master),.root.theme-ha .abtn{box-shadow:0 2px 9px rgba(0,0,0,.12);}
+.root.theme-ha .volrow,.root.theme-ha .panel{box-shadow:0 1px 6px rgba(0,0,0,.07);}
 .wrap{position:relative;z-index:1;display:flex;gap:36px;padding:40px;}
 .left{flex:1;display:flex;flex-direction:column;gap:22px;min-width:0;}
 .ovl{font:700 11px/1.2 'DM Sans';letter-spacing:.16em;text-transform:uppercase;color:rgba(var(--smc-tint),.55);}
@@ -251,7 +259,7 @@ class SonosMusicCard extends HTMLElement {
 .pill.playing-bg .pbg{display:flex;}
 .pill.playing-bg>svg,.pill.playing-bg>ha-icon,.pill.playing-bg .dot,.pill.playing-bg .pn{opacity:.32;}
 .pill .dot{width:7px;height:7px;border-radius:99px;background:rgba(var(--smc-tint),.3);}
-.pill.current{background:rgba(var(--smc-accent-rgb),.16);border-color:rgba(var(--smc-accent-rgb),.55);color:#fff;box-shadow:inset 0 0 0 2px var(--smc-accent);}
+.pill.current{background:rgba(var(--smc-accent-rgb),.16);border-color:rgba(var(--smc-accent-rgb),.55);color:rgba(var(--smc-tint),.95);box-shadow:inset 0 0 0 2px var(--smc-accent);}
 .pill.current .dot{background:var(--smc-accent);box-shadow:0 0 0 3px rgba(var(--smc-accent-rgb),.55);}
 .pill.follower{opacity:.55;background:rgba(var(--smc-tint),.04);border-color:rgba(var(--smc-tint),.1);color:rgba(var(--smc-tint),.6);}
 .pill.follower:hover{opacity:.85;}
@@ -349,7 +357,7 @@ class SonosMusicCard extends HTMLElement {
 .abt1{display:block;font:700 16px/1.2 'DM Sans';}
 .abt2{display:block;font:400 13px/1.3 'DM Sans';color:rgba(var(--smc-tint),.7);margin-top:3px;}
 .grid{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:12px;overflow:auto;}
-.tile{position:relative;display:flex;flex-direction:column;justify-content:flex-end;padding:14px;border-radius:14px;min-height:118px;border:none;cursor:pointer;text-align:left;overflow:hidden;color:#fff;transition:transform .09s ease,filter .12s ease,box-shadow .12s ease;}
+.tile{position:relative;display:flex;flex-direction:column;justify-content:flex-end;padding:14px;border-radius:14px;min-height:118px;border:none;cursor:pointer;text-align:left;overflow:hidden;color:#fff;box-shadow:0 3px 12px rgba(0,0,0,.22);transition:transform .09s ease,filter .12s ease,box-shadow .12s ease;}
 .tile:active{transform:scale(.94);filter:brightness(1.14);box-shadow:0 6px 18px rgba(0,0,0,.4);}
 .tile .tscrim{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.55),transparent 60%);}
 .tile .tn{position:relative;font:700 15px/1.15 'DM Sans';color:#fff;}
