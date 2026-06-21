@@ -1,7 +1,7 @@
 /* Sonos Music Card — multi-room music player (Immersive) for Home Assistant.
    Live native Sonos grouping (group_members + join/unjoin), helper-free. */
 const TEAL = "linear-gradient(155deg,#0c4a5a 0%,#0a3140 52%,#06222e 100%)";
-const VERSION = "0.6.1";
+const VERSION = "0.6.2";
 const ICON = {
   prev: '<polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line>',
   next: '<polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line>',
@@ -266,19 +266,17 @@ class SonosMusicCard extends HTMLElement {
 .grow.grp .gtog{background:#00CCCC;color:#06303d;}
 .grow.master .gtog{background:#18b2c4;color:#06303d;}
 .gtog.move{background:rgba(232,145,58,.2);color:#f3c18a;box-shadow:inset 0 0 0 1px rgba(232,145,58,.5);}
-.volrow{position:relative;display:flex;flex-direction:column;gap:12px;padding:16px 20px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);}
-.volmain{display:flex;align-items:center;gap:12px;}
-.voltools{display:flex;align-items:center;justify-content:flex-end;gap:10px;}
-.mpct{font:700 13px/1 'DM Sans';color:#7fe9ef;min-width:40px;text-align:right;}
-.vbtn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;flex:none;}
+.volrow{position:relative;display:flex;align-items:center;gap:10px;padding:13px 16px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.13);flex-wrap:wrap;}
+.vic{display:inline-flex;align-items:center;color:rgba(255,255,255,.8);flex:none;}
+.vbtn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;flex:none;}
 .vbtn:hover{background:rgba(255,255,255,.16);}
-.slider{position:relative;height:24px;display:flex;align-items:center;cursor:pointer;touch-action:none;flex:1;}
+.vbtn.act{background:#18b2c4;color:#06303d;border-color:transparent;}
+.mpct{font:700 13px/1 'DM Sans';color:#7fe9ef;min-width:42px;text-align:center;flex:none;}
+.popwrap{position:relative;flex:none;}
+.slider{position:relative;height:24px;display:flex;align-items:center;cursor:pointer;touch-action:none;flex:1 1 150px;min-width:120px;}
 .slider .strack{position:relative;width:100%;height:8px;border-radius:99px;background:rgba(255,255,255,.2);}
 .slider .sfill{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,#0c6678,#18b2c4);width:0;}
 .slider .sknob{position:absolute;top:50%;width:20px;height:20px;border-radius:99px;background:#fff;transform:translate(-50%,-50%);left:0;}
-.btn{display:inline-flex;align-items:center;gap:8px;border-radius:99px;font:600 14px/1 'DM Sans';cursor:pointer;white-space:nowrap;padding:10px 16px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.18);}
-.btn.act{background:#18b2c4;color:#06303d;border-color:transparent;}
-.btn.icon{padding:9px 11px;}
 .pop{position:absolute;top:calc(100% + 12px);right:0;width:340px;max-width:calc(100vw - 32px);max-height:70vh;overflow:auto;padding:18px;border-radius:16px;background:#0a2f3c;border:1px solid rgba(255,255,255,.14);z-index:30;box-shadow:0 18px 40px rgba(0,0,0,.5);}
 .pophead,.prhead{display:flex;align-items:center;justify-content:space-between;}
 .popcnt{font:600 12px/1 'DM Sans';color:#7fe9ef;}
@@ -312,21 +310,17 @@ class SonosMusicCard extends HTMLElement {
     <div class="left">
       <div class="col"><span class="ovl">Speakers — tap to select group</span><div class="pillrow">${pills}</div></div>
       <div class="volrow">
-        <div class="volmain">
-          <span class="vic">${svg(ICON.vol, 20)}</span>
-          <button class="vbtn mdn" aria-label="Group volume down">${svg(ICON.minus, 18, 2.6)}</button>
-          <div class="slider master"><div class="strack"><div class="sfill"></div><div class="sknob"></div></div></div>
-          <button class="vbtn mup" aria-label="Group volume up">${svg(ICON.plus, 18, 2.6)}</button>
-          <span class="mpct"></span>
-        </div>
-        <div class="voltools">
-          <button class="btn mvol icon" aria-label="Reset all to defaults">${svg(ICON.reset, 16, 2.2)}</button>
-          <div style="position:relative">
-          <button class="btn drop icon" aria-label="Room volumes">${svg(ICON.chev, 18)}</button>
+        <span class="vic">${svg(ICON.vol, 20)}</span>
+        <button class="vbtn mdn" aria-label="Group volume down">${svg(ICON.minus, 18, 2.6)}</button>
+        <div class="slider master"><div class="strack"><div class="sfill"></div><div class="sknob"></div></div></div>
+        <button class="vbtn mup" aria-label="Group volume up">${svg(ICON.plus, 18, 2.6)}</button>
+        <span class="mpct"></span>
+        <button class="vbtn mvol" aria-label="Reset all to defaults">${svg(ICON.reset, 17, 2.2)}</button>
+        <div class="popwrap">
+          <button class="vbtn drop" aria-label="Room volumes">${svg(ICON.chev, 18)}</button>
           <div class="pop" style="display:none">
             <div class="pophead"><span class="ovl">Room volumes</span><span class="popcnt"></span></div>
             <div class="poprows">${popRooms}</div>
-          </div>
           </div>
         </div>
       </div>
