@@ -99,6 +99,7 @@ playlists:
   title: Apple Music playlists             # optional heading
   source: library://playlist               # browse this MA node → one tile per playlist found
   source_type: playlist                    # optional content_type for the browse call
+  dedupe: id                               # drop duplicates MA returns: id (default) | name | false
   # browse_entity: media_player.mass_lounge  # optional; defaults to the first room with a mass_entity
   # items:                                  # optional: explicit tiles (override auto-browse)
   #   - { name: Chill, media_id: library://playlist/13, media_type: playlist, image: <art-url> }
