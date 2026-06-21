@@ -72,9 +72,14 @@ Rooms (name → Sonos entity → MA entity → default volume %):
 
 ## Config (YAML) the card accepts
 There's also a **visual GUI editor** (`getConfigElement` → `sonos-music-card-editor`): edit the
-card in a dashboard to get a form for the rooms (entity pickers, default volume, `mdi:*` icon) and
-`default_room`. It writes the same YAML and preserves `actions:`/`playlists:`. When a room has an
-`icon`, its top-nav pill becomes icon-only and the icon shows in the group rows.
+card in a dashboard to get a form for the rooms (entity pickers, default volume, `mdi:*` icon),
+the **shortcuts/scripts** (name + a `script.*` picker + icon → writes `actions:`), the playlists,
+`default_room`, and the three compact toggles. It writes the same YAML. When a room has an
+`icon`, its top-nav pill becomes icon-only and the icon shows in the group rows. The pill of the
+**playing** group's coordinator gets a subtle play watermark behind its icon (focus is still the
+ring) — so it's clear which of several groups is actually playing. In compact mode the open
+stage's trigger icon turns into a ✕ (tap it to close, or tap another trigger to switch) — there's
+no separate close button stealing a row.
 ```yaml
 type: custom:sonos-music-card
 default_room: media_player.lounge          # optional: which group is focused on first load (localStorage wins after)
