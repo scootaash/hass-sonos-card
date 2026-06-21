@@ -1,7 +1,7 @@
 /* Sonos Music Card — multi-room music player (Immersive) for Home Assistant.
    Live native Sonos grouping (group_members + join/unjoin), helper-free. */
 const TEAL = "linear-gradient(155deg,#0c4a5a 0%,#0a3140 52%,#06222e 100%)";
-const VERSION = "0.7.0";
+const VERSION = "0.8.0";
 const ICON = {
   prev: '<polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line>',
   next: '<polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line>',
@@ -11,6 +11,7 @@ const ICON = {
   move: '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line>',
   exit: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line>',
   split: '<polyline points="15 14 20 9 15 4"></polyline><path d="M4 20v-7a4 4 0 0 1 4-4h12"></path>',
+  close: '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>',
   reset: '<path d="M3 12a9 9 0 1 0 9-9 9 9 0 0 0-6.4 2.6L3 8"></path><path d="M3 3v5h5"></path>',
   vol: '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>',
   chev: '<polyline points="6 9 12 15 18 9"></polyline>',
@@ -71,6 +72,9 @@ class SonosMusicCard extends HTMLElement {
     this._playlists = this._playlistItems.slice();
     this._playlistMsg = (this._playlistsConfigured && !this._playlistItems.length) ? "Loading playlists…" : null;
     this._browsed = false;
+    this._compactGroups = !!config.compact_groups;   // groups → icon strip on the art, tap to open
+    this._compactPlaylists = !!config.compact_playlists; // playlists → icon on the art, tap to open
+    this._stage = "art";                              // album-art "stage": art | groups | playlists
     this._focusKey = "smc-focus:" + this._rooms[0].entity;
     this._cfgDefaultFocus = config.default_room || null;
     this._focusEntity = null;
@@ -204,6 +208,10 @@ class SonosMusicCard extends HTMLElement {
       `<button class="abtn" data-act="${i}"><span class="abic">${this._icon(a.icon, 22)}</span><span style="min-width:0"><span class="abt1">${esc(a.name)}</span><span class="abt2"></span></span></button>`).join("");
     const popRooms = this._rooms.map((r, i) =>
       `<div class="prow" data-room="${i}"><div class="prhead"><span class="prn">${esc(r.name)}</span><div class="prr"><button class="prdef" data-room="${i}" aria-label="Reset to default">${svg(ICON.reset, 14, 2.2)}</button><span class="prpct"></span></div></div><div class="prslide"><button class="vbtn rdn" data-room="${i}" aria-label="Volume down">${svg(ICON.minus, 16, 2.6)}</button><div class="slider sm" data-room="${i}"><div class="strack"><div class="sfill"></div><div class="sknob"></div></div></div><button class="vbtn rup" data-room="${i}" aria-label="Volume up">${svg(ICON.plus, 16, 2.6)}</button></div></div>`).join("");
+    const cg = this._compactGroups, cp = this._compactPlaylists;
+    const groupBuilder = `<div class="gchead"><span class="ovl">Tap to add to group</span><div class="ghbtns"><button class="addall" style="display:none"></button><button class="splitbtn" style="display:none"></button></div></div><div class="glist">${grows}</div>`;
+    const playlistGrid = `<span class="ovl"${this._actions.length && !cp ? ' style="margin-top:4px"' : ""}>${esc(this._playlistsTitle)}</span><div class="grid"></div>`;
+    const panelHasContent = this._actions.length || (!cp && this._playlistsConfigured);
 
     root.innerHTML = `<style>
 :host{display:block;}
@@ -231,7 +239,22 @@ class SonosMusicCard extends HTMLElement {
 .player{flex:1;display:flex;gap:22px;min-height:0;}
 .art{position:relative;flex:none;width:498px;height:498px;border-radius:20px;overflow:hidden;background:linear-gradient(150deg,#1bb6c7,#0c5f72 48%,#07303f);}
 .cover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
-.scrim{position:absolute;left:0;right:0;bottom:0;padding:22px 26px 24px;background:linear-gradient(to top,rgba(4,22,30,.92),transparent);}
+.scrim{position:absolute;left:0;right:0;bottom:0;padding:22px 26px 24px;background:linear-gradient(to top,rgba(4,22,30,.92),transparent);transition:opacity .28s;}
+.player.cg{justify-content:center;}
+.player.cg .art{flex:1;width:auto;height:auto;aspect-ratio:1/1;max-width:560px;max-height:100%;}
+.topstrip{position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;}
+.gstrip{display:flex;align-items:center;gap:8px;cursor:pointer;padding:5px 9px;border-radius:99px;background:rgba(4,22,30,.5);}
+.gstrip:empty{display:none;}
+.gsi{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.18);display:inline-flex;align-items:center;justify-content:center;color:#fff;font:700 13px/1 'DM Sans';}
+.gsi ha-icon{--mdc-icon-size:18px;}
+.pltrig{width:42px;height:42px;border-radius:50%;border:none;background:rgba(4,22,30,.55);color:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;}
+.stageovl{position:absolute;inset:0;z-index:4;background:linear-gradient(150deg,#0c4a5a,#06222e);padding:16px;display:flex;flex-direction:column;gap:10px;opacity:0;visibility:hidden;transform:translateY(12px);transition:opacity .28s ease,transform .28s ease,visibility .28s;overflow:auto;}
+.art.s-groups .gstage,.art.s-playlists .plstage{opacity:1;visibility:visible;transform:none;}
+.art.s-groups .scrim,.art.s-playlists .scrim{opacity:0;pointer-events:none;}
+.art.s-groups .topstrip,.art.s-playlists .topstrip{z-index:5;}
+.stclose{align-self:flex-end;width:32px;height:32px;border-radius:50%;border:none;background:rgba(255,255,255,.12);color:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex:none;}
+.plhd{display:flex;align-items:center;justify-content:space-between;}
+.stageovl .grid{flex:1;}
 .np{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
 .eq{display:flex;align-items:flex-end;gap:3px;height:16px;}
 .eq span{width:3px;height:100%;background:#00e0e0;border-radius:2px;transform-origin:bottom;}
@@ -275,12 +298,13 @@ class SonosMusicCard extends HTMLElement {
 .vbtn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;flex:none;}
 .vbtn:hover{background:rgba(255,255,255,.16);}
 .vbtn.act{background:#18b2c4;color:#06303d;border-color:transparent;}
-.mpct{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font:700 11px/1 'DM Sans';color:#fff;background:rgba(6,34,46,.6);padding:2px 8px;border-radius:99px;pointer-events:none;}
+.mpct{font:700 9.5px/1 'DM Sans';color:#06303d;pointer-events:none;}
 .popwrap{position:relative;flex:none;}
 .slider{position:relative;height:42px;display:flex;align-items:center;cursor:pointer;touch-action:none;flex:1;min-width:50px;}
 .slider .strack{position:relative;width:100%;height:8px;border-radius:99px;background:rgba(255,255,255,.2);}
 .slider .sfill{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,#0c6678,#18b2c4);width:0;}
-.slider .sknob{position:absolute;top:50%;width:20px;height:20px;border-radius:99px;background:#fff;transform:translate(-50%,-50%);left:0;}
+.slider .sknob{position:absolute;top:50%;width:20px;height:20px;border-radius:99px;background:#fff;transform:translate(-50%,-50%);left:0;display:flex;align-items:center;justify-content:center;}
+.slider.master .sknob{width:34px;height:34px;box-shadow:0 2px 6px rgba(0,0,0,.35);}
 .pop{position:absolute;top:calc(100% + 12px);right:0;width:340px;max-width:calc(100vw - 32px);max-height:70vh;overflow:auto;padding:18px;border-radius:16px;background:#0a2f3c;border:1px solid rgba(255,255,255,.14);z-index:30;box-shadow:0 18px 40px rgba(0,0,0,.5);}
 .pophead,.prhead{display:flex;align-items:center;justify-content:space-between;}
 .popcnt{font:600 12px/1 'DM Sans';color:#7fe9ef;}
@@ -317,7 +341,7 @@ class SonosMusicCard extends HTMLElement {
         <span class="vic">${svg(ICON.vol, 20)}</span>
         <div class="vgroup">
           <button class="vstep mdn" aria-label="Group volume down">${svg(ICON.minus, 20, 2.8)}</button>
-          <div class="slider master"><div class="strack"><div class="sfill"></div><div class="sknob"></div></div><span class="mpct"></span></div>
+          <div class="slider master"><div class="strack"><div class="sfill"></div><div class="sknob"><span class="mpct"></span></div></div></div>
           <button class="vstep mup" aria-label="Group volume up">${svg(ICON.plus, 20, 2.8)}</button>
         </div>
         <button class="vbtn mvol" aria-label="Reset all to defaults">${svg(ICON.reset, 17, 2.2)}</button>
@@ -329,9 +353,10 @@ class SonosMusicCard extends HTMLElement {
           </div>
         </div>
       </div>
-      <div class="player">
+      <div class="player${cg ? " cg" : ""}">
         <div class="art">
           <img class="cover" alt="" style="display:none">
+          ${(cg || cp) ? `<div class="topstrip">${cg ? `<div class="gstrip"></div>` : "<span></span>"}${cp ? `<button class="pltrig" aria-label="${esc(this._playlistsTitle)}">${svg(ICON.music, 20)}</button>` : ""}</div>` : ""}
           <div class="scrim">
             <div class="np"><div class="eq"><span></span><span></span><span></span><span></span></div>
               <div class="npt"><div class="t1">—</div><div class="t2"></div></div></div>
@@ -344,14 +369,16 @@ class SonosMusicCard extends HTMLElement {
               <button class="next"></button>
             </div>
           </div>
+          ${cg ? `<div class="stageovl gstage"><button class="stclose gclose" aria-label="Back to player">${svg(ICON.close, 18)}</button>${groupBuilder}</div>` : ""}
+          ${cp ? `<div class="stageovl plstage"><div class="plhd"><span class="ovl">${esc(this._playlistsTitle)}</span><button class="stclose plclose" aria-label="Back to player">${svg(ICON.close, 18)}</button></div><div class="grid"></div></div>` : ""}
         </div>
-        <div class="gcol"><div class="gchead"><span class="ovl">Tap to add to group</span><div class="ghbtns"><button class="addall" style="display:none"></button><button class="splitbtn" style="display:none"></button></div></div><div class="glist">${grows}</div></div>
+        ${cg ? "" : `<div class="gcol">${groupBuilder}</div>`}
       </div>
     </div>
-    <div class="panel">
+    ${panelHasContent ? `<div class="panel">
       ${this._actions.length ? `<span class="ovl">${esc(this._actionsTitle)}</span><div class="actions">${actionBtns}</div>` : ""}
-      ${this._playlistsConfigured ? `<span class="ovl"${this._actions.length ? ' style="margin-top:4px"' : ""}>${esc(this._playlistsTitle)}</span><div class="grid"></div>` : ""}
-    </div>
+      ${(!cp && this._playlistsConfigured) ? playlistGrid : ""}
+    </div>` : ""}
   </div>
 </div>`;
 
@@ -369,6 +396,7 @@ class SonosMusicCard extends HTMLElement {
       drop: $(".drop"), pop: $(".pop"), popcnt: $(".popcnt"), mvol: $(".mvol"),
       grid: $(".grid"), actions: [...root.querySelectorAll(".abtn")],
       prows: [...root.querySelectorAll(".prow")],
+      gstrip: $(".gstrip"), pltrig: $(".pltrig"),
     };
 
     // events
@@ -393,6 +421,9 @@ class SonosMusicCard extends HTMLElement {
     this.$.drop.addEventListener("click", (e) => { e.stopPropagation(); this._open = !this._open; this._update(); });
     this.$.mvol.addEventListener("click", () => this._setDefaults());
     this.$.actions.forEach((el) => el.addEventListener("click", () => this._runAction(+el.dataset.act)));
+    if (this._compactGroups && this.$.gstrip) this.$.gstrip.addEventListener("click", () => this._toggleStage("groups"));
+    if (this._compactPlaylists && this.$.pltrig) this.$.pltrig.addEventListener("click", () => this._toggleStage("playlists"));
+    root.querySelectorAll(".stclose").forEach((el) => el.addEventListener("click", () => { this._stage = "art"; this._update(); }));
     this._renderTiles();
     this._onDoc = (e) => { if (this._open && !e.composedPath().includes(this.$.pop) && e.composedPath().indexOf(this.$.drop) < 0) { this._open = false; this._update(); } };
     document.addEventListener("click", this._onDoc);
@@ -433,6 +464,8 @@ class SonosMusicCard extends HTMLElement {
     this._localVol[r.entity] = r.def; this._localVolAt[r.entity] = Date.now();
     this._svc("media_player", "volume_set", { entity_id: r.entity, volume_level: r.def / 100 });
   }
+  // Compact mode: swap the album-art "stage" between now-playing, groups, playlists.
+  _toggleStage(s) { this._stage = this._stage === s ? "art" : s; this._update(); }
   // Header button: pull the focused speaker out so it becomes its own group.
   _splitFocus() {
     const f = this._focusRoom(); if (this._effMembers().size <= 1) return;
@@ -628,6 +661,14 @@ class SonosMusicCard extends HTMLElement {
     // cover
     if (pic) { if (this.$.cover.getAttribute("src") !== pic) this.$.cover.src = pic; this.$.cover.style.display = ""; }
     else this.$.cover.style.display = "none";
+    // compact mode — album-art "stage" + grouped-speaker icon strip
+    if (this._compactGroups || this._compactPlaylists) {
+      this.$.art.classList.toggle("s-groups", this._stage === "groups");
+      this.$.art.classList.toggle("s-playlists", this._stage === "playlists");
+    }
+    if (this._compactGroups && this.$.gstrip) {
+      this.$.gstrip.innerHTML = grouped.map((r) => `<span class="gsi" title="${esc(r.name)}">${r.icon ? this._icon(r.icon, 18) : esc((r.name || "·").charAt(0).toUpperCase())}</span>`).join("");
+    }
     // pills — focused group's coordinator = ring/bright; followers = grey; other masters/solo = normal
     this._rooms.forEach((r, i) => {
       const el = this.$.pills[i]; const gm = this._groupMembersOf(r);
@@ -813,6 +854,40 @@ class SonosMusicCardEditor extends HTMLElement {
     box.appendChild(this._iconPicker("Icon", room.icon, (v) => this._setRoom(i, "icon", v)));
     return box;
   }
+  _setPlaylist(key, val) {
+    let pl = this._config.playlists; if (Array.isArray(pl)) pl = { items: pl }; pl = Object.assign({}, pl);
+    if (val === undefined || val === "" || val === null) delete pl[key]; else pl[key] = val;
+    this._config = Object.assign({}, this._config, { playlists: pl });
+    this._emit();
+  }
+  _switch(label, value, onChange) {
+    const wrap = document.createElement("div"); wrap.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:10px;";
+    const lab = document.createElement("span"); lab.textContent = label; lab.style.cssText = "font-size:14px;";
+    const sw = document.createElement("ha-switch"); sw.checked = !!value;
+    sw.addEventListener("change", () => onChange(sw.checked));
+    wrap.append(lab, sw); return wrap;
+  }
+  _select(label, value, options, onChange) {
+    const wrap = document.createElement("div"); wrap.style.cssText = "display:flex;flex-direction:column;gap:4px;";
+    const lab = document.createElement("span"); lab.textContent = label; lab.style.cssText = "font-size:12px;opacity:.7;";
+    const sel = document.createElement("select");
+    sel.style.cssText = "padding:9px;border-radius:6px;background:var(--secondary-background-color,rgba(127,127,127,.12));color:var(--primary-text-color,inherit);border:1px solid var(--divider-color,rgba(127,127,127,.3));font:inherit;";
+    options.forEach(([v, t]) => { const o = document.createElement("option"); o.value = v; o.textContent = t; if (String(value) === v) o.selected = true; sel.appendChild(o); });
+    sel.addEventListener("change", () => onChange(sel.value));
+    wrap.append(lab, sel); return wrap;
+  }
+  _playlistsCard() {
+    let pl = this._config.playlists; if (Array.isArray(pl)) pl = { items: pl }; pl = pl || {};
+    const box = document.createElement("div");
+    box.style.cssText = "border:1px solid var(--divider-color,rgba(127,127,127,.3));border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;";
+    const h = document.createElement("span"); h.textContent = "Playlists"; h.style.fontWeight = "600"; box.appendChild(h);
+    box.appendChild(this._text("Section title", pl.title, (v) => this._setPlaylist("title", v)));
+    box.appendChild(this._text("Source (Music Assistant browse id, e.g. library://playlist)", pl.source, (v) => this._setPlaylist("source", v)));
+    box.appendChild(this._text("Source type", pl.source_type, (v) => this._setPlaylist("source_type", v)));
+    box.appendChild(this._select("Remove duplicates", pl.dedupe === undefined ? "id" : String(pl.dedupe), [["id", "Exact duplicates (default)"], ["name", "Same name"], ["false", "Keep all"]], (v) => this._setPlaylist("dedupe", v === "false" ? false : v)));
+    if (Array.isArray(pl.items) && pl.items.length) { const n = document.createElement("span"); n.textContent = `+ ${pl.items.length} explicit item(s) (edit in YAML)`; n.style.cssText = "font-size:11px;opacity:.6;"; box.appendChild(n); }
+    return box;
+  }
   _rebuild() {
     if (!this._config) return;
     this._pickers = []; this.innerHTML = "";
@@ -820,6 +895,9 @@ class SonosMusicCardEditor extends HTMLElement {
     root.appendChild(this._entity("Default room (focused on load)", this._config.default_room, (v) => this._setTop("default_room", v)));
     this._config.rooms.forEach((room, i) => root.appendChild(this._roomCard(room, i)));
     root.appendChild(this._btn("+ Add room", () => this._addRoom()));
+    root.appendChild(this._playlistsCard());
+    root.appendChild(this._switch("Compact groups (icon strip on the album art)", this._config.compact_groups, (v) => this._setTop("compact_groups", v || undefined)));
+    root.appendChild(this._switch("Compact playlists (icon on the album art)", this._config.compact_playlists, (v) => this._setTop("compact_playlists", v || undefined)));
     this.appendChild(root); this._applyHass();
   }
 }
