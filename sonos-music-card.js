@@ -1,7 +1,7 @@
 /* Sonos Music Card — multi-room music player (Immersive) for Home Assistant.
    Live native Sonos grouping (group_members + join/unjoin), helper-free. */
 const TEAL = "linear-gradient(155deg,#0c4a5a 0%,#0a3140 52%,#06222e 100%)";
-const VERSION = "0.13.1";
+const VERSION = "0.13.2";
 const ICON = {
   prev: '<polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line>',
   next: '<polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line>',
@@ -236,16 +236,18 @@ class SonosMusicCard extends HTMLElement {
 .root.theme-ha{background:var(--ha-card-background,var(--card-background-color,${TEAL}));color:var(--primary-text-color,#fff);--smc-tint:var(--rgb-primary-text-color,255,255,255);--smc-accent:var(--primary-color,var(--smc-accent));--smc-accent-rgb:var(--rgb-primary-color,0,204,204);--smc-accent-ink:var(--text-primary-color,var(--smc-accent-ink));backdrop-filter:blur(16px) saturate(1.25);-webkit-backdrop-filter:blur(16px) saturate(1.25);}
 .root.theme-ha .wash,.root.theme-ha .blob{display:none;}
 .root.theme-ha .scrim,.root.theme-ha .topstrip{--smc-tint:255,255,255;}
-/* Stack the (translucent) theme surface a few times so the blurred album art
-   behind a stage is muted, not vivid — then lift the buttons off it with a
-   stronger fill + border + soft shadow so they read on a light frosted theme. */
-.root.theme-ha .stageovl{background:var(--ha-card-background,var(--card-background-color,#0c4a5a)),var(--ha-card-background,var(--card-background-color,#0c4a5a)),var(--ha-card-background,var(--card-background-color,#0c4a5a)),var(--ha-card-background,var(--card-background-color,#0c4a5a));backdrop-filter:blur(22px) saturate(1.3);-webkit-backdrop-filter:blur(22px) saturate(1.3);}
-.root.theme-ha .pill{color:rgba(var(--smc-tint),.9);}
-.root.theme-ha .pill:not(.current){background:rgba(var(--smc-tint),.1);border-color:rgba(var(--smc-tint),.22);box-shadow:0 1px 5px rgba(0,0,0,.08);}
-.root.theme-ha .grow:not(.grp):not(.master),.root.theme-ha .abtn{background:rgba(var(--smc-tint),.1);border-color:rgba(var(--smc-tint),.2);}
-.root.theme-ha .grow.grp{background:rgba(var(--smc-accent-rgb),.16);}
-.root.theme-ha .grow:not(.master),.root.theme-ha .abtn{box-shadow:0 2px 9px rgba(0,0,0,.12);}
-.root.theme-ha .volrow,.root.theme-ha .panel{box-shadow:0 1px 6px rgba(0,0,0,.07);}
+/* Frosted theme: read on a light surface. Stages are opaque (a solid theme
+   floor under the translucent card surface) so the album-art placeholder can't
+   bleed through; buttons are defined by a stronger fill + border + drop shadow
+   rather than a faint tint. */
+.root.theme-ha .stageovl{background:var(--ha-card-background,var(--card-background-color,#0c4a5a)),var(--ha-card-background,var(--card-background-color,#0c4a5a)),var(--ha-card-background,var(--card-background-color,#0c4a5a)),var(--primary-background-color,#0c4a5a);backdrop-filter:blur(22px) saturate(1.3);-webkit-backdrop-filter:blur(22px) saturate(1.3);}
+.root.theme-ha .pill{color:rgba(var(--smc-tint),.95);}
+.root.theme-ha .pill:not(.current){background:rgba(var(--smc-tint),.12);border-color:rgba(var(--smc-tint),.32);box-shadow:0 1px 4px rgba(0,0,0,.14);}
+.root.theme-ha .volrow{background:rgba(var(--smc-tint),.1);border-color:rgba(var(--smc-tint),.26);box-shadow:0 1px 5px rgba(0,0,0,.1);}
+.root.theme-ha .grow:not(.grp):not(.master),.root.theme-ha .abtn{background:rgba(var(--smc-tint),.13);border-color:rgba(var(--smc-tint),.28);}
+.root.theme-ha .grow.grp{background:rgba(var(--smc-accent-rgb),.2);}
+.root.theme-ha .grow:not(.master),.root.theme-ha .abtn{box-shadow:0 2px 10px rgba(0,0,0,.16);}
+.root.theme-ha .panel{box-shadow:0 1px 6px rgba(0,0,0,.08);}
 .wrap{position:relative;z-index:1;display:flex;gap:36px;padding:40px;}
 .left{flex:1;display:flex;flex-direction:column;gap:22px;min-width:0;}
 .ovl{font:700 11px/1.2 'DM Sans';letter-spacing:.16em;text-transform:uppercase;color:rgba(var(--smc-tint),.55);}
