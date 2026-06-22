@@ -1,7 +1,7 @@
 /* Sonos Music Card — multi-room music player (Immersive) for Home Assistant.
    Live native Sonos grouping (group_members + join/unjoin), helper-free. */
 const TEAL = "linear-gradient(155deg,#0c4a5a 0%,#0a3140 52%,#06222e 100%)";
-const VERSION = "0.13.2";
+const VERSION = "0.14.0";
 const ICON = {
   prev: '<polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line>',
   next: '<polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line>',
@@ -223,7 +223,7 @@ class SonosMusicCard extends HTMLElement {
     const panelHasContent = panelActions || (!cp && this._playlistsConfigured);
 
     root.innerHTML = `<style>
-:host{display:block;--smc-tint:255,255,255;--smc-accent:var(--smc-accent);--smc-accent-rgb:0,204,204;--smc-accent-ink:var(--smc-accent-ink);}
+:host{display:block;--smc-tint:255,255,255;--smc-accent:#18b2c4;--smc-accent-rgb:0,204,204;--smc-accent-ink:#06303d;--smc-shadow:0 1px 4px rgba(0,0,0,.14);}
 *{box-sizing:border-box;}
 @keyframes eq{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}
 .root{position:relative;width:100%;max-width:1280px;margin:0 auto;border-radius:20px;overflow:hidden;background:${TEAL};font-family:'DM Sans',system-ui,sans-serif;color:#fff;}
@@ -233,7 +233,7 @@ class SonosMusicCard extends HTMLElement {
 .b2{bottom:-200px;right:120px;width:560px;height:560px;background:radial-gradient(circle,rgba(13,90,110,.6),transparent 65%);}
 /* theme: ha — adopt the Home Assistant theme's card surface + text, and tint the
    chrome from the theme text colour (so it matches frosted-glass / any HA theme). */
-.root.theme-ha{background:var(--ha-card-background,var(--card-background-color,${TEAL}));color:var(--primary-text-color,#fff);--smc-tint:var(--rgb-primary-text-color,255,255,255);--smc-accent:var(--primary-color,var(--smc-accent));--smc-accent-rgb:var(--rgb-primary-color,0,204,204);--smc-accent-ink:var(--text-primary-color,var(--smc-accent-ink));backdrop-filter:blur(16px) saturate(1.25);-webkit-backdrop-filter:blur(16px) saturate(1.25);}
+.root.theme-ha{background:var(--ha-card-background,var(--card-background-color,${TEAL}));color:var(--primary-text-color,#fff);--smc-tint:var(--rgb-primary-text-color,255,255,255);--smc-accent:var(--primary-color,#18b2c4);--smc-accent-rgb:var(--rgb-primary-color,0,204,204);--smc-accent-ink:var(--text-primary-color,#06303d);--smc-shadow:var(--ha-card-box-shadow,0 2px 9px rgba(0,0,0,.16));backdrop-filter:blur(16px) saturate(1.25);-webkit-backdrop-filter:blur(16px) saturate(1.25);}
 .root.theme-ha .wash,.root.theme-ha .blob{display:none;}
 .root.theme-ha .scrim,.root.theme-ha .topstrip{--smc-tint:255,255,255;}
 /* Frosted theme: read on a light surface. Stages are opaque (a solid theme
@@ -242,12 +242,11 @@ class SonosMusicCard extends HTMLElement {
    rather than a faint tint. */
 .root.theme-ha .stageovl{background:var(--ha-card-background,var(--card-background-color,#0c4a5a)),var(--ha-card-background,var(--card-background-color,#0c4a5a)),var(--ha-card-background,var(--card-background-color,#0c4a5a)),var(--primary-background-color,#0c4a5a);backdrop-filter:blur(22px) saturate(1.3);-webkit-backdrop-filter:blur(22px) saturate(1.3);}
 .root.theme-ha .pill{color:rgba(var(--smc-tint),.95);}
-.root.theme-ha .pill:not(.current){background:rgba(var(--smc-tint),.12);border-color:rgba(var(--smc-tint),.32);box-shadow:0 1px 4px rgba(0,0,0,.14);}
-.root.theme-ha .volrow{background:rgba(var(--smc-tint),.1);border-color:rgba(var(--smc-tint),.26);box-shadow:0 1px 5px rgba(0,0,0,.1);}
+.root.theme-ha .pill:not(.current),.root.theme-ha .vbtn:not(.act):not(.active){background:rgba(var(--smc-tint),.12);border-color:rgba(var(--smc-tint),.32);box-shadow:var(--smc-shadow);}
+.root.theme-ha .volrow{background:rgba(var(--smc-tint),.1);border-color:rgba(var(--smc-tint),.26);box-shadow:var(--smc-shadow);}
 .root.theme-ha .grow:not(.grp):not(.master),.root.theme-ha .abtn{background:rgba(var(--smc-tint),.13);border-color:rgba(var(--smc-tint),.28);}
 .root.theme-ha .grow.grp{background:rgba(var(--smc-accent-rgb),.2);}
-.root.theme-ha .grow:not(.master),.root.theme-ha .abtn{box-shadow:0 2px 10px rgba(0,0,0,.16);}
-.root.theme-ha .panel{box-shadow:0 1px 6px rgba(0,0,0,.08);}
+.root.theme-ha .grow:not(.master),.root.theme-ha .abtn,.root.theme-ha .panel,.root.theme-ha .stageovl{box-shadow:var(--smc-shadow);}
 .wrap{position:relative;z-index:1;display:flex;gap:36px;padding:40px;}
 .left{flex:1;display:flex;flex-direction:column;gap:22px;min-width:0;}
 .ovl{font:700 11px/1.2 'DM Sans';letter-spacing:.16em;text-transform:uppercase;color:rgba(var(--smc-tint),.55);}
@@ -287,6 +286,14 @@ class SonosMusicCard extends HTMLElement {
 .art.s-groups .gstage,.art.s-playlists .plstage,.art.s-actions .actstage,.art.s-volume .vstage{opacity:1;visibility:visible;transform:none;}
 .art.s-groups .scrim,.art.s-playlists .scrim,.art.s-actions .scrim,.art.s-volume .scrim{opacity:0;pointer-events:none;}
 .art.s-groups .topstrip,.art.s-playlists .topstrip,.art.s-actions .topstrip,.art.s-volume .topstrip{z-index:5;background:none;}
+/* With a stage open, hide the cover so the (no longer min-height-stretched) art
+   can't show a stretched image behind it. In ha, the box behind the frosted
+   stage is the theme surface, not the teal placeholder. */
+.art.s-groups .cover,.art.s-playlists .cover,.art.s-actions .cover,.art.s-volume .cover{display:none!important;}
+.root.theme-ha .art.s-groups,.root.theme-ha .art.s-playlists,.root.theme-ha .art.s-actions,.root.theme-ha .art.s-volume{background:var(--ha-card-background,var(--card-background-color,#0c4a5a)),var(--primary-background-color,#0c4a5a);}
+/* Light album art: deepen the now-playing scrim so white text/transport stay legible. */
+.art.lightart .scrim{background:linear-gradient(to top,rgba(4,22,30,.97),rgba(4,22,30,.6) 38%,rgba(4,22,30,.18) 72%,transparent);}
+.art.lightart .topstrip{background:linear-gradient(to bottom,rgba(4,22,30,.92),rgba(4,22,30,.4) 55%,transparent);}
 .stageovl .grid{flex:1;}
 .stageovl .actions{flex:none;}
 .vshd{display:flex;align-items:center;justify-content:space-between;flex:none;}
@@ -329,9 +336,9 @@ class SonosMusicCard extends HTMLElement {
 .volrow{position:relative;display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:16px;background:rgba(var(--smc-tint),.07);border:1px solid rgba(var(--smc-tint),.13);}
 .vic{display:inline-flex;align-items:center;color:rgba(var(--smc-tint),.8);flex:none;}
 .vgroup{flex:1;min-width:0;display:flex;align-items:center;background:rgba(var(--smc-tint),.06);border:1px solid rgba(var(--smc-tint),.14);border-radius:99px;padding:2px;}
-.vstep{width:42px;height:42px;border-radius:50%;border:none;background:transparent;color:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:none;}
+.vstep{width:42px;height:42px;border-radius:50%;border:none;background:transparent;color:rgba(var(--smc-tint),.85);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:none;}
 .vstep:hover{background:rgba(var(--smc-tint),.14);}
-.vbtn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;border:1px solid rgba(var(--smc-tint),.18);background:rgba(var(--smc-tint),.08);color:#fff;cursor:pointer;flex:none;}
+.vbtn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;border:1px solid rgba(var(--smc-tint),.18);background:rgba(var(--smc-tint),.08);color:rgba(var(--smc-tint),.9);cursor:pointer;flex:none;}
 .vbtn:hover{background:rgba(var(--smc-tint),.16);}
 .vbtn.act{background:var(--smc-accent);color:var(--smc-accent-ink);border-color:transparent;}
 .mpct{font:700 9.5px/1 'DM Sans';color:#06303d;pointer-events:none;}
@@ -375,7 +382,7 @@ class SonosMusicCard extends HTMLElement {
 /* On stacked layouts, let an open stage grow the card so the popup is the single
    scroll — rather than scrolling inside the album-art square. */
 .root.stack .art.s-groups,.root.stack .art.s-playlists,.root.stack .art.s-actions,.root.stack .art.s-volume{height:auto;aspect-ratio:auto;}
-.root.stack .art.s-groups .gstage,.root.stack .art.s-playlists .plstage,.root.stack .art.s-actions .actstage,.root.stack .art.s-volume .vstage{position:relative;overflow:visible;min-height:62vw;}
+.root.stack .art.s-groups .gstage,.root.stack .art.s-playlists .plstage,.root.stack .art.s-actions .actstage,.root.stack .art.s-volume .vstage{position:relative;overflow:visible;}
 .root.stack .art.s-playlists .grid,.root.stack .art.s-volume .poprows{overflow:visible;}
 /* Phones: smaller pills/icons and tighter padding (it's framed by the popup anyway). */
 .root.phone{border-radius:14px;}
@@ -729,8 +736,7 @@ class SonosMusicCard extends HTMLElement {
     // background — from album art (art), fixed teal (home), or the HA theme surface
     // (ha: handled in CSS via .theme-ha; no JS wash so the theme shows through).
     const pic = a.entity_picture || null;
-    if (this._theme === "art") this._applyWash(pic);
-    else if (this._theme === "home") this._applyWash(null);
+    this._detectArt(pic);
     // cover
     if (pic) { if (this.$.cover.getAttribute("src") !== pic) this.$.cover.src = pic; this.$.cover.style.display = ""; }
     else this.$.cover.style.display = "none";
@@ -830,26 +836,33 @@ class SonosMusicCard extends HTMLElement {
     });
   }
 
-  _applyWash(pic) {
+  // Sample the album art: derive the wash colour (art mode) and detect whether the
+  // image is light, so the now-playing scrim can deepen and keep white text legible.
+  _detectArt(pic) {
     if (pic === this._lastPic) return;
     this._lastPic = pic;
-    if (!pic) return this._setWash(null);
+    const lum = (v) => { if (this.$ && this.$.art) this.$.art.classList.toggle("lightart", v != null && v > 142); };
+    const wash = (rgb) => { if (this._theme === "art") this._setWash(rgb); else if (this._theme === "home") this._setWash(null); };
+    if (!pic) { lum(null); wash(null); return; }
     const img = new Image(); img.crossOrigin = "anonymous";
     img.onload = () => {
       try {
         const c = document.createElement("canvas"); c.width = c.height = 24;
         const ctx = c.getContext("2d"); ctx.drawImage(img, 0, 0, 24, 24);
         const d = ctx.getImageData(0, 0, 24, 24).data;
-        let r = 0, g = 0, b = 0, wsum = 0;
+        let r = 0, g = 0, b = 0, wsum = 0, lr = 0, lg = 0, lb = 0;
         for (let i = 0; i < d.length; i += 4) {
           const mx = Math.max(d[i], d[i + 1], d[i + 2]), mn = Math.min(d[i], d[i + 1], d[i + 2]);
           const sat = mx === 0 ? 0 : (mx - mn) / mx; const w = 0.15 + sat;
           r += d[i] * w; g += d[i + 1] * w; b += d[i + 2] * w; wsum += w;
+          lr += d[i]; lg += d[i + 1]; lb += d[i + 2];
         }
-        this._setWash([r / wsum, g / wsum, b / wsum]);
-      } catch (e) { this._setWash(null); }
+        const n = d.length / 4;
+        lum(0.2126 * (lr / n) + 0.7152 * (lg / n) + 0.0722 * (lb / n));
+        wash([r / wsum, g / wsum, b / wsum]);
+      } catch (e) { lum(null); wash(null); }
     };
-    img.onerror = () => this._setWash(null);
+    img.onerror = () => { lum(null); wash(null); };
     img.src = pic;
   }
   _setWash(rgb) {

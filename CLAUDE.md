@@ -97,7 +97,12 @@ they don't drop a dark island into a light dashboard. **Accents** (rings, slider
 active triggers) are tokenised (`--smc-accent` / `--smc-accent-rgb` / `--smc-accent-ink`) and map to
 `--primary-color` / `--rgb-primary-color` / `--text-primary-color` in `ha`. The album-art region
 (cover, scrim, now-playing, transport, compact triggers) keeps white-on-dark via a tint reset, since
-it sits over artwork (and the `.mpct` % stays dark — it's on the white knob). `art` is the original wash that recolours from the playing
+it sits over artwork (and the `.mpct` % stays dark — it's on the white knob). Chrome shadows come
+from a `--smc-shadow` token that maps to `--ha-card-box-shadow` in `ha` (so depth matches the
+dashboard's cards). Independent of theme, the card samples the cover's luminance and adds `.art.lightart`
+when it's a light image, deepening the now-playing scrim so white text/transport stay legible. Open
+submenus hide the cover (and use the theme surface behind the frosted stage) so the artwork can't
+stretch behind them. `art` is the original wash that recolours from the playing
 artwork; `home` is the fixed teal. `art`/`home` are unchanged because `--smc-tint` defaults to
 `255,255,255`. The editor has a Theme dropdown.
 ```yaml
