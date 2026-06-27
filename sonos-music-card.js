@@ -1,7 +1,7 @@
 /* Sonos Music Card — multi-room music player (Immersive) for Home Assistant.
    Live native Sonos grouping (group_members + join/unjoin), helper-free. */
 const TEAL = "linear-gradient(155deg,#0c4a5a 0%,#0a3140 52%,#06222e 100%)";
-const VERSION = "0.14.0";
+const VERSION = "0.15.0";
 const ICON = {
   prev: '<polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line>',
   next: '<polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line>',
@@ -185,6 +185,12 @@ class SonosMusicCard extends HTMLElement {
     return m.has(gm[0]) ? gm[0] : focus.entity;
   }
   _coordRoom() { return this._roomByEntity(this._coordEntity()) || this._focusRoom(); }
+  // Control entity for a room: the Music Assistant player when present, else the
+  // Sonos entity. Stream/queue control (grouping + transport) goes through MA so
+  // there's a single controller — native Sonos control while MA streams drops the
+  // audiobook ("too many requests from too many sources"). State is still READ from
+  // the Sonos entity (group_members / now-playing / art), which MA keeps accurate.
+  _massOf(r) { return (r && r.massEntity) || (r && r.entity) || null; }
   _grouped() { const m = this._effMembers(); return this._rooms.filter((r) => m.has(r.entity)); }
   _loadFocus() { try { const v = localStorage.getItem(this._focusKey); return (v && this._rooms.some((r) => r.entity === v)) ? v : null; } catch (e) { return null; } }
   _defaultFocus() {
@@ -469,7 +475,7 @@ class SonosMusicCard extends HTMLElement {
     this.$.addall.addEventListener("click", () => this._addAll());
     this.$.prev.addEventListener("click", () => this._prev());
     this.$.next.addEventListener("click", () => this._next());
-    this.$.pp.addEventListener("click", () => this._svc("media_player", "media_play_pause", { entity_id: this._coordRoom().entity }));
+    this.$.pp.addEventListener("click", () => this._svc("media_player", "media_play_pause", { entity_id: this._massOf(this._coordRoom()) }));
     this.$.bar.addEventListener("pointerdown", (e) => this._seekDrag(e));
     this.$.mSlider.addEventListener("pointerdown", (e) => this._volDrag(e, "master"));
     this.$.mdn.addEventListener("click", () => this._nudge("master", -5));
@@ -528,10 +534,10 @@ class SonosMusicCard extends HTMLElement {
     if (r.entity === this._coordEntity()) return; // coordinator anchor — split via the header button
     if (this._effMembers().has(r.entity)) {
       this._optGroup(r.entity, false);
-      this._svc("media_player", "unjoin", { entity_id: r.entity });
+      this._svc("media_player", "unjoin", { entity_id: this._massOf(r) });
     } else {
       this._optGroup(r.entity, true);
-      this._svc("media_player", "join", { entity_id: this._coordRoom().entity, group_members: [r.entity] });
+      this._svc("media_player", "join", { entity_id: this._massOf(this._coordRoom()), group_members: [this._massOf(r)] });
       this._toDefault(r);
     }
     this._update();
@@ -547,11 +553,11 @@ class SonosMusicCard extends HTMLElement {
   _splitFocus() {
     const f = this._focusRoom(); if (this._effMembers().size <= 1) return;
     this._optGroup(f.entity, false);
-    this._svc("media_player", "unjoin", { entity_id: f.entity });
+    this._svc("media_player", "unjoin", { entity_id: this._massOf(f) });
     this._update();
   }
-  _prev() { this._svc("media_player", "media_previous_track", { entity_id: this._coordRoom().entity }); }
-  _next() { this._svc("media_player", "media_next_track", { entity_id: this._coordRoom().entity }); }
+  _prev() { this._svc("media_player", "media_previous_track", { entity_id: this._massOf(this._coordRoom()) }); }
+  _next() { this._svc("media_player", "media_next_track", { entity_id: this._massOf(this._coordRoom()) }); }
   // Built-in glyph by name, or pass `mdi:*` through to HA's <ha-icon>.
   _icon(name, size = 22) {
     if (typeof name === "string" && name.startsWith("mdi:"))
@@ -654,7 +660,7 @@ class SonosMusicCard extends HTMLElement {
     const apply = (x, fire) => {
       let p = Math.max(0, Math.min(1, (x - rect.left) / rect.width));
       this.$.barF.style.width = p * 100 + "%"; this.$.barK.style.left = p * 100 + "%";
-      if (fire) this._svc("media_player", "media_seek", { entity_id: m.entity, seek_position: p * dur });
+      if (fire) this._svc("media_player", "media_seek", { entity_id: this._massOf(m), seek_position: p * dur });
     };
     this._drag = { seek: true };
     apply(e.clientX, false);
@@ -709,7 +715,7 @@ class SonosMusicCard extends HTMLElement {
     const out = this._rooms.filter((r) => !this._effMembers().has(r.entity));
     if (!out.length) return;
     out.forEach((r) => this._optGroup(r.entity, true));
-    this._svc("media_player", "join", { entity_id: coord.entity, group_members: out.map((r) => r.entity) });
+    this._svc("media_player", "join", { entity_id: this._massOf(coord), group_members: out.map((r) => this._massOf(r)) });
     out.forEach((r) => this._toDefault(r));
     this._update();
   }
