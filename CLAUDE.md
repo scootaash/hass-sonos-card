@@ -31,14 +31,17 @@ Each room has **two** entities. Use the right one for the right job:
 | Grouping state (live, reflects Sonos app) | **Sonos** `media_player.<room>` → `group_members` | The Sonos integration keeps `group_members` accurate; MA's `mass_*` report `group_members: []`. |
 | Now-playing / artist / progress | Sonos `media_player.<room>` | Populated when MA streams to the Sonos player. |
 | Album art (for the colour wash) | Sonos `media_player.<room>` → `entity_picture` | It's a same-origin `/api/media_player_proxy/...` URL → canvas-safe. MA art is absolute `http://192.168…:8095` (mixed-content + taints canvas). |
-| Volume read/set | Sonos `media_player.<room>` → `volume_level`, `media_player.volume_set` | Native. |
-| Group add/remove/relocate | `media_player.join` (target = coordinator's Sonos entity, `group_members: [room]`) / `media_player.unjoin` (target = room) | Native Sonos grouping; visible everywhere. `join` relocates a room already in another group. |
+| Volume read/set | Sonos `media_player.<room>` → `volume_level`, `media_player.volume_set` | Native. Stays on Sonos (set+read on the same entity → no drift; not the conflict source). |
+| Group add/remove/relocate | `media_player.join` / `unjoin` on the **MA** `mass_<room>` players (join target = `mass_<coordinator>`, `group_members: [mass_<room>]`) | MA must be the single controller. Grouping the Sonos players natively *while MA streams* drops the coordinator's audio (audiobook stops + loses position) — "too many requests from too many sources". MA groups the real Sonos speakers underneath, so Sonos `group_members` still reflects it (that's what the card reads). Falls back to the Sonos entity if a room has no `mass_entity`. |
+| Transport (play/pause, next/prev, seek) | The **MA** `mass_<coordinator>` player | Same single-controller reason as grouping — sending transport to the Sonos entity while MA streams competes with MA. |
 | Play a playlist / album / track | `music_assistant.play_media` on the **MA** `media_player.mass_<coordinator>` | MA `library://…` URIs only resolve on MA players; play to the selected group's coordinator. |
 | Focused group / "master" | **Card-internal** (the last pill tapped), persisted to `localStorage` | Helper-free — no `input_select`. The card derives the *coordinator* of the focused group from live `group_members[0]`. |
 
-Grouping model (live, native — no helpers):
-- **Source of truth** = `group_members` on each Sonos `media_player.<room>`. A room is *solo* when
+Grouping model (read from Sonos, act through MA — no helpers):
+- **Source of truth (read)** = `group_members` on each Sonos `media_player.<room>`. A room is *solo* when
   `group_members` ≤ 1 entry, *grouped* when > 1 with `group_members[0]` = the **coordinator**.
+- **Actions (write)** = `join`/`unjoin` on the `mass_*` players (see table) — never the Sonos entities,
+  or the audiobook drops. The optimistic-grouping override is still keyed by the Sonos entity (display).
 - **Top-nav pills select a group** (focus) — they never join/unjoin. Tapping any speaker re-centres
   the card on the group it belongs to; the coordinator (hence now-playing / transport / playback
   target) is whatever Sonos reports, unchanged by the tap.
